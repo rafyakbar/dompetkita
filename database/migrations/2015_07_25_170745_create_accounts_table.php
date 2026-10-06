@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('accounts', function (Blueprint $table) {
-            $table->ulid('id')->index()->primary();
+            $table->ulid('id')->primary();
             $table->string('name')->unique()->index();
             $table->foreignIdFor(User::class, 'owner_id')->constrained((new User())->getTable())->cascadeOnDelete();
             $table->softDeletes();
