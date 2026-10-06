@@ -63,13 +63,16 @@ class Wallet extends BaseWallet
     public function onModelCreated(): void
     {
         $amount = $this->meta['initial_balance'] ?? 0;
+        $meta = [
+            'account_id' => $this->account_id,
+        ];
         if($this->type == WalletTypeEnum::CREDIT_CARD->value) {
             $amount = $this->meta['total_due'] ?? 0;
             if($amount > 0) {
-                $this->withdraw($amount, ['description' => 'Initial credit card due']);
+                $this->withdrawFloat($amount, array_merge($meta, ['description' => 'Initial credit card due']));
             }
         } elseif($amount > 0) {
-            $this->deposit($amount, ['description' => 'Initial balance']);
+            $this->depositFloat($amount, array_merge($meta, ['description' => 'Initial balance']));
         }
     }
 }
