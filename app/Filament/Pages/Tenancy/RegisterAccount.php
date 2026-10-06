@@ -27,7 +27,7 @@ class RegisterAccount extends RegisterTenant
 
     public static function getLabel(): string
     {
-        return 'Register Account';
+        return 'Daftar Akun';
     }
 
     public function form(Form $form): Form
@@ -35,12 +35,20 @@ class RegisterAccount extends RegisterTenant
         return $form
             ->schema([
                 TextInput::make('name')
+                    ->label(__('Nama Akun'))
+                    ->required()
                     ->placeholder('Personal Account'),
             ]);
     }
 
     protected function handleRegistration(array $data): Account
     {
-        return auth()->user()->ownedAccounts()->create($data);
+        $account = auth()->user()->ownedAccounts()->create($data);
+
+        auth()->user()->update([
+            'latest_account_id' => $account->id,
+        ]);
+
+        return $account;
     }
 }

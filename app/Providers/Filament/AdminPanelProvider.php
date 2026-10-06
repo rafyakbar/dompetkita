@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login;
+use App\Filament\Pages\Auth\Register;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\Tenancy\EditAccountProfile;
 use App\Filament\Pages\Tenancy\RegisterAccount;
@@ -32,6 +33,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('hub')
             ->login(Login::class)
+            ->registration(Register::class)
             ->colors([
                 'primary' => Color::Sky,
             ])
@@ -44,8 +46,8 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-//                Widgets\AccountWidget::class,
-//                Widgets\FilamentInfoWidget::class,
+                /*Widgets\AccountWidget::class,
+                Widgets\FilamentInfoWidget::class,*/
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -82,6 +84,7 @@ class AdminPanelProvider extends PanelProvider
                 return null;
             })
             ->databaseNotifications()
-            ->databaseNotificationsPolling('30s');
+            ->databaseNotificationsPolling('30s')
+            ->spa();
     }
 }
