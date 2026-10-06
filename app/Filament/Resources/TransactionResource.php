@@ -35,6 +35,21 @@ class TransactionResource extends Resource
 
     protected static ?int $navigationSort = 600;
 
+    public static function getModelLabel(): string
+    {
+        return __('transactions.title_singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('transactions.title');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('transactions.title');
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -236,7 +251,7 @@ class TransactionResource extends Resource
                 ->searchable(),
             Tables\Columns\TextColumn::make('amount_float')
                 ->label(__('transactions.fields.amount'))
-                ->numeric()
+                ->formatStateUsing(fn (?Model $record) => !blank($record) ? format_money($record->amount, $record->wallet?->currency_code) : null)
                 ->sortable(),
             Tables\Columns\TextColumn::make('wallet.name')
                 ->label(__('transactions.fields.wallet'))

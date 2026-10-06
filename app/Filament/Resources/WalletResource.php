@@ -20,7 +20,9 @@ use Filament\Tables;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Table;
 use Guava\FilamentIconPicker\Forms\IconPicker;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class WalletResource extends Resource
 {
@@ -29,6 +31,21 @@ class WalletResource extends Resource
     protected static ?string $navigationIcon = 'lucide-wallet';
 
     protected static ?int $navigationSort = 100;
+
+    public static function getModelLabel(): string
+    {
+        return __('wallets.title_singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('wallets.title');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('wallets.title');
+    }
 
     public static function form(Form $form): Form
     {
@@ -60,6 +77,7 @@ class WalletResource extends Resource
                             ->numeric()
                             ->inputMode('decimal')
                             ->default(0)
+                            ->formatStateUsing(fn ($state, ?Model $record): string|null => !blank($record) ? (string) $record->balance_float : $state)
                             ->disabled()
                             ->visible(fn (Get $get, string $operation): bool => $get('type') == WalletTypeEnum::GENERAL->value && $operation !== 'create'),
                         TextInput::make('meta.initial_balance')
@@ -138,7 +156,7 @@ class WalletResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label(__('wallets.fields.name'))
-                    ->color(fn (?Model $record) => Color::hex($record->color))
+                    ->color(fn (?Model $record) => blank($record?->color) ? null : Color::hex($record->color))
                     ->weight('bold')
                     ->searchable()
                     ->sortable(),
@@ -155,6 +173,7 @@ class WalletResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('balance_float')
                     ->label(__('wallets.fields.balance'))
+                    ->formatStateUsing(fn (?Model $record) => !blank($record) ? format_money($record->balance, $record->currency_code) : null)
                     ->weight('bold')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('currency_code')
@@ -170,6 +189,7 @@ class WalletResource extends Resource
                     ->options(__('wallets.types'))
                     ->multiple()
                     ->searchable(),
+                Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
                 Action::make('refresh_balance')
@@ -186,10 +206,15 @@ class WalletResource extends Resource
                             ->send();
                     }),
                 Tables\Actions\EditAction::make()->slideOver(),
+                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ForceDeleteAction::make(),
+                Tables\Actions\RestoreAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\ForceDeleteBulkAction::make(),
+                    Tables\Actions\RestoreBulkAction::make(),
                 ]),
             ])->emptyStateActions([
                 Tables\Actions\CreateAction::make()->slideOver(),
@@ -210,5 +235,13 @@ class WalletResource extends Resource
 //            'create' => Pages\CreateWallet::route('/create'),
 //            'edit' => Pages\EditWallet::route('/{record}/edit'),
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
     }
 }

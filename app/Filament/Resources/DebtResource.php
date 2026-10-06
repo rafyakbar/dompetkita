@@ -32,6 +32,21 @@ class DebtResource extends Resource
 
     protected static ?int $navigationSort = 500;
 
+    public static function getModelLabel(): string
+    {
+        return __('debts.title_singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('debts.title');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('debts.title');
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -95,10 +110,11 @@ class DebtResource extends Resource
                     ->searchable(),
                 TextColumn::make('total_debt_amount')
                     ->label(__('debts.fields.total_debt_amount'))
-                    ->numeric()
+                    ->formatStateUsing(fn (?Model $record) => !blank($record) ? format_money($record->total_debt_amount, $record->wallet?->currency_code) : null)
                     ->sortable(),
                 BadgeableColumn::make('balance')
                     ->label(__('goals.fields.balance'))
+                    ->formatStateUsing(fn (?Model $record) => !blank($record) ? format_money($record->balance, $record->wallet?->currency_code) : null)
                     ->suffixBadges([
                         Badge::make('progress')
                             ->label(fn(Model $record) => $record->progress. '%')

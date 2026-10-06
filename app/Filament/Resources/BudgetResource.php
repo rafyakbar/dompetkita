@@ -33,6 +33,21 @@ class BudgetResource extends Resource
 
     protected static ?int $navigationSort = 300;
 
+    public static function getModelLabel(): string
+    {
+        return __('budgets.title_singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('budgets.title');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('budgets.title');
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -138,13 +153,13 @@ class BudgetResource extends Resource
                     ->badge(),
                 TextColumn::make('amount')
                     ->label(__('budgets.fields.actual_amount'))
-                    ->numeric()
+                    ->formatStateUsing(fn (?Model $record) => !blank($record) ? format_money($record->amount, null, true) : null)
                     ->sortable(),
                 TextColumn::make('spend_amount')
                     ->label(__('budgets.fields.spend_amount'))
-                    ->numeric()
+                    ->formatStateUsing(fn (?Model $record) => !blank($record) ? format_money($record->spend_amount, null, false) : null)
                     ->sortable()
-                    ->color(fn(?Model $record) => $record->spend_amount * -1 > $record->amount ? 'danger' : ''),
+                    ->color(fn(?Model $record) => $record && $record->spend_amount * -1 > ($record->amount * 100) ? 'danger' : ''),
                 Tables\Columns\IconColumn::make('status')
                     ->label(__('budgets.fields.enabled'))
                     ->icon(fn (string $state): string => match ($state) {

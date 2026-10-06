@@ -33,6 +33,21 @@ class GoalResource extends Resource
 
     protected static ?int $navigationSort = 400;
 
+    public static function getModelLabel(): string
+    {
+        return __('goals.title_singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('goals.title');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('goals.title');
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -80,10 +95,11 @@ class GoalResource extends Resource
                     ->searchable(),
                 TextColumn::make('amount')
                     ->label(__('goals.fields.target_amount'))
-                    ->numeric()
+                    ->formatStateUsing(fn (?Model $record) => !blank($record) ? format_money($record->amount, $record->currency_code, true) : null)
                     ->sortable(),
                 BadgeableColumn::make('balance')
                     ->label(__('goals.fields.balance'))
+                    ->formatStateUsing(fn (?Model $record) => !blank($record) ? format_money($record->balance, $record->currency_code, true) : null)
                     ->suffixBadges([
                         Badge::make('progress')
                             ->label(fn(Model $record) => $record->progress. '%')

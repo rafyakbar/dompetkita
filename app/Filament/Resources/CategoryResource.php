@@ -20,6 +20,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Guava\FilamentIconPicker\Forms\IconPicker;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class CategoryResource extends Resource
@@ -29,6 +30,21 @@ class CategoryResource extends Resource
     protected static ?string $navigationIcon = 'lucide-layout-list';
 
     protected static ?int $navigationSort = 200;
+
+    public static function getModelLabel(): string
+    {
+        return __('categories.title_singular');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('categories.title');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('categories.title');
+    }
 
     public static function form(Form $form): Form
     {
@@ -98,7 +114,8 @@ class CategoryResource extends Resource
                     ->formatStateUsing(fn (string $state): string => __("categories.types.{$state}.label"))
                     ->searchable(),
                 Tables\Columns\TextColumn::make('monthly_balance')
-                    ->label(__('categories.fields.monthly_balance')),
+                    ->label(__('categories.fields.monthly_balance'))
+                    ->formatStateUsing(fn ($state) => format_money($state, null, false)),
                 Tables\Columns\IconColumn::make('status')
                     ->label(__('categories.fields.is_visible'))
                     ->icon(fn (string $state): string => match ($state) {
