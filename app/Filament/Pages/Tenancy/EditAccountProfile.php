@@ -11,7 +11,7 @@ class EditAccountProfile extends EditTenantProfile
 {
     public static function getLabel(): string
     {
-        return 'Account Info';
+        return 'Info Akun';
     }
 
     public function form(Form $form): Form
