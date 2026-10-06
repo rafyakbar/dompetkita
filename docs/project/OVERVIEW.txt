@@ -9,12 +9,15 @@ Tujuan        : Aplikasi manajemen dan pencatatan keuangan modern multi-akun
                 (multi-tenant) untuk kebutuhan personal, rumah tangga (keluarga), 
                 maupun usaha kecil dengan fokus utama pada kecepatan loading 
                 dan pengalaman mobile yang mulus.
-Tech Stack    : - Framework : Laravel 13.x (PHP 8.2+)
-                - UI Engine : Filament PHP v5.x (Livewire v4)
-                - Tenancy   : Filament Multi-Tenancy (Tenant Model: Account)
-                - Mobile UI : hammadzafar05/filament-mobile-preset
-                - Auth & 2FA: Filament Breezy Plugin
-                - Database  : MySQL / PostgreSQL / SQLite
+Tech Stack    : - Framework      : Laravel 13.x (PHP 8.2+)
+                - UI Engine      : Filament PHP v5.x (Livewire v4)
+                - Blade Optimizer: livewire/blaze (https://blazephp.dev/)
+                - Tenancy        : Filament Multi-Tenancy (Tenant Model: Account)
+                - Mobile UI      : hammadzafar05/filament-mobile-preset
+                - Auth & 2FA     : Filament Breezy Plugin
+                - AI Assistant   : Laravel Boost (https://laravel.com/framework/docs/boost)
+                - Profiling/Dev  : fruitcake/laravel-debugbar (https://github.com/fruitcake/laravel-debugbar)
+                - Database       : MySQL / PostgreSQL / SQLite
 
 
 2. PRINSIP ARSITEKTUR UTAMA
@@ -28,6 +31,10 @@ Tech Stack    : - Framework : Laravel 13.x (PHP 8.2+)
      dan Eloquent Model Attribute Casting (`$casts`).
 
 2. Performance-First & Fast Loading (Kecepatan Maksimal):
+   - Blade Compilation Optimization (Livewire Blaze):
+     Menggunakan `livewire/blaze` untuk mengompilasi anonymous Blade components ke 
+     optimized PHP functions pada compile-time, memangkas 91-97% overhead rendering 
+     komponen UI.
    - Database Indexing Optimal: Seluruh foreign key dan kolom pencarian/sorting 
      (`account_id`, `happened_at`, `status`, `slug`, `order`) diberi indeks.
    - Composite Indexing untuk Tenancy: Menambahkan indeks gabungan seperti 
@@ -36,6 +43,8 @@ Tech Stack    : - Framework : Laravel 13.x (PHP 8.2+)
    - Denormalisasi Terkontrol: Kolom `account_id` dipasang langsung di tabel operasional 
      (`budgets`, `transactions`, `transfers`, `debts`) untuk meniadakan query `JOIN` 
      bertingkat saat scoping tenant di Filament.
+   - Profiling Ketat dengan Laravel Debugbar: Seluruh query, N+1 detection, memory 
+     usage, dan rendering timeline diaudit secara real-time selama development.
    - Filament Table Optimization: Menerapkan `deferLoading()` pada seluruh tabel, 
      menghindari query N+1, dan membatasi ukuran paginasi default (15-20 data per halaman).
 
@@ -45,6 +54,11 @@ Tech Stack    : - Framework : Laravel 13.x (PHP 8.2+)
      * Stacked Tables: Baris tabel bertransformasi rapi menjadi kartu di layar < 640px 
        tanpa perlu scroll horizontal.
      * Slide-over modal sebagai standar penginputan data agar alur pengguna tetap fokus.
+
+4. AI-Assisted Architecture & Standards (Laravel Boost):
+   - Terintegrasi dengan Laravel Boost (`https://laravel.com/framework/docs/boost`) 
+     sebagai MCP server resmi untuk memandu AI coding agents dalam memahami skema DB, 
+     routes, best practices Laravel 13, dan konvensi proyek yang tersimpan di `.ai/rules`.
 
 
 3. ARSITEKTUR MULTI-TENANCY & HAK AKSES
@@ -254,7 +268,158 @@ F. PENDUKUNG (ATTACHMENTS)
     - Performance Index: index(attachable_type, attachable_id)
 
 
-5. ATURAN BISNIS & ALUR FINANSIAL (CORE RULES)
+5. PANDUAN ANTARMUKA PENGGUNA & ALUR (UI / UX FLOW)
+--------------------------------------------------------------------------------
+
+A. HEADER, TOPBAR & TENANT SWITCHER
+--------------------------------------------------------------------------------
+1. Pemilihan Akun (Tenant Switcher Dropdown):
+   - Terletak di kiri atas panel/sidebar, menampilkan avatar akun dan nama akun aktif 
+     saat ini (contoh: "Keuangan Pribadi").
+   - Ketika diklik, menampilkan dropdown menu:
+     * Daftar Akun: Menampilkan daftar seluruh akun milik user (`owned`) dan akun 
+       tempat user terdaftar sebagai anggota (`member`). User dapat berganti konteks 
+       pembukuan dengan 1 kali klik tanpa logout.
+     * Daftarkan Akun Baru (`RegisterAccount`): Membuka form untuk membuat akun 
+       pembukuan baru (misal: "Keuangan Rumah Tangga").
+     * Info & Anggota Akun (`EditTenantProfile`): Membuka modal pengaturan akun:
+       - Mengubah nama akun, deskripsi, dan mata uang acuan (`currency_code`).
+       - Tab / Seksi "Kelola Anggota": Menampilkan tabel member aktif dan tombol 
+         "Undang Anggota" (memasukkan email & role: member/viewer).
+2. Notifikasi Database (Ikon Lonceng):
+   - Menampilkan notifikasi peringatan anggaran yang menipis/melebihi batas, 
+     serta pemberitahuan undangan akun baru.
+3. User Profile Dropdown (Filament Breezy):
+   - Terletak di kanan atas (atau bagian bawah sidebar):
+     * Profil Saya: Mengubah nama, email, dan foto avatar.
+     * Keamanan Akun: Ubah kata sandi dan pengaturan Two-Factor Authentication (2FA).
+     * Keluar (Logout).
+
+B. MENU SIDEBAR (DESKTOP) & BOTTOM NAV (MOBILE)
+--------------------------------------------------------------------------------
+
+1. Dasbor (Dashboard)
+   - Widget Statistik Ringkasan (Stats Overview):
+     * Total Saldo Kas: Akumulasi saldo seluruh dompet aktif dalam format mata uang (Rp).
+     * Total Pemasukan Bulan Ini: Badge hijau dengan indikator trend naik/turun.
+     * Total Pengeluaran Bulan Ini: Badge merah dengan indikator trend naik/turun.
+     * Total Sisa Hutang & Piutang: Ringkasan total kewajiban bayar dan hak tagih aktif.
+   - Widget Grafik Finansial (ApexCharts):
+     * Grafik Arus Kas (TransactionChart): Perbandingan bar/area chart pemasukan vs pengeluaran 
+       dalam 30 hari terakhir.
+     * Grafik Kategori Pengeluaran (CategoryChart): Donut chart alokasi pengeluaran 
+       terbanyak bulan ini.
+   - Peringatan Anggaran (Budget Alert Banner):
+     * Banner/Callout dinamis yang muncul otomatis jika ada kategori belanja yang 
+       pengeluarannya telah mencapai persentase alert (misal: >= 80%).
+   - Transaksi Terakhir (Latest Transactions Table):
+     * Menampilkan 5 transaksi mutasi terakhir dengan tombol cepat (shortcut) untuk melihat/mengedit.
+
+2. Dompet (Wallets)
+   - Tampilan Tabel / Kartu:
+     * Menampilkan daftar dompet: Ikon & Warna, Nama Dompet, Mata Uang (`IDR`), 
+       Saldo Saat Ini (`current_balance` diformat mata uang tebal), dan status Boleh Minus.
+     * Tab Filter Cepat: Semua Dompet, Kas/Tunai, Bank, Tabungan.
+     * Filter Tong Sampah (*TrashedFilter*) untuk melihat dan memulihkan dompet terhapus.
+   - Aksi Tiap Baris:
+     * Ubah (Membuka Slide-Over Modal).
+     * Hapus (Soft Delete ke tong sampah).
+     * Pulihkan / Hapus Permanen (jika berada di filter Tong Sampah).
+   - Form Tambah / Ubah Dompet (Slide-Over Modal):
+     * Nama Dompet (contoh: "Bank UOB", "Dompet Tunai").
+     * Saldo Awal (hanya diisi saat pembuatan pertama).
+     * Mata Uang (default: IDR).
+     * Ikon (IconPicker) & Warna (ColorPicker).
+     * Toggle "Boleh Minus" (`allow_minus`).
+
+3. Kategori (Categories)
+   - Tampilan Tabel:
+     * Ikon & Warna Kategori, Nama Kategori, Tipe (Badge: Pemasukan / Pengeluaran), 
+       Saldo Mutasi Bulan Ini, Status (Badge: Aktif / Nonaktif).
+     * Fitur Reorder (Drag & Drop) untuk mengatur urutan prioritas kategori (`order`).
+   - Filter: Tipe (Pemasukan/Pengeluaran), Status (Aktif/Nonaktif), Tong Sampah.
+   - Form Tambah / Ubah Kategori (Slide-Over Modal):
+     * Nama Kategori (contoh: "Gaji", "Makanan & Minuman", "Listrik & Air").
+     * Tipe: Pemasukan (Income) atau Pengeluaran (Expense).
+     * Ikon (IconPicker) & Warna (ColorPicker).
+     * Toggle Status Aktif/Nonaktif.
+
+4. Transaksi (Transactions & Transfers)
+   - Tampilan Tabel Mutasi:
+     * Tanggal & Waktu (`happened_at`), Tipe Mutasi (Badge: Pemasukan / Pengeluaran / Transfer), 
+       Nominal (format mata uang hijau/merah), Dompet Terkait, Kategori (tampil strip `—` jika transfer), 
+       Catatan, Bukti Struk/Lampiran.
+   - Filter Lengkap:
+     * Rentang Tanggal (Date Range Picker), Dompet, Kategori, Tipe Mutasi.
+   - Tombol Aksi Header:
+     * "Catat Transaksi" (Pemasukan/Pengeluaran biasa).
+     * "Transfer Antar Dompet" (Pemindahan dana).
+   - Form Transaksi Biasa (Slide-Over Modal):
+     * Pilihan Tipe: Pemasukan atau Pengeluaran.
+     * Dompet Terpilih.
+     * Kategori Terpilih (difilter sesuai tipe Income/Expense).
+     * Nominal Transaksi (Numeric field dengan format mata uang).
+     * Tanggal & Waktu Transaksi (default: saat ini).
+     * Catatan / Deskripsi.
+     * Upload Foto Struk/Nota (`attachments`).
+   - Form Transfer Antar Dompet (Slide-Over Modal):
+     * Dompet Asal (`from_wallet_id`).
+     * Dompet Tujuan (`to_wallet_id`, otomatis dicegah memilih dompet yang sama).
+     * Nominal Dana yang Ditransfer.
+     * Biaya Admin / Fee (opsional, misal biaya transfer beda bank).
+     * Tanggal & Waktu Transfer.
+     * Catatan & Bukti Transfer.
+
+5. Anggaran (Budgets)
+   - Tampilan Tabel:
+     * Kategori Belanja, Periode (Mingguan / Bulanan / Tahunan), Plafon Anggaran, 
+       Pengeluaran Terpakai, Progress Bar Visual dengan indikator warna (Hijau aman, 
+       Kuning waspada, Merah overbudget).
+   - Form Anggaran (Slide-Over Modal):
+     * Kategori Belanja (hanya kategori bertipe Expense).
+     * Plafon Anggaran (`max_amount`).
+     * Tipe Periode (`period_type`: Mingguan, Bulanan, Tahunan).
+     * Tanggal Mulai (`period_start`) & Selesai (`period_end`).
+     * Persentase Alert (`alert_percentage`, default: 80%).
+
+6. Hutang & Piutang (Debts)
+   - Tampilan Tabel:
+     * Nama Orang/Lembaga, Tipe (Badge Merah: Hutang / Badge Hijau: Piutang), 
+       Nominal Pokok, Total Terbayar, Sisa Hutang/Piutang, Jatuh Tempo, Progress Pelunasan.
+   - Aksi Tiap Baris:
+     * "Bayar / Terima Cicilan": Membuka modal pembayaran cepat (`debt_payments`).
+     * Ubah / Hapus.
+   - Form Catat Hutang/Piutang Baru (Slide-Over Modal):
+     * Nama Pihak Terkait (*Counterparty*).
+     * Tipe: Hutang (*Payable*) atau Piutang (*Receivable*).
+     * Dompet Terkait:
+       - Jika Hutang: Dompet penerima pencairan uang (saldo bertambah).
+       - Jika Piutang: Dompet sumber pinjaman (saldo berkurang).
+     * Nominal Pokok Pinjaman.
+     * Tanggal Jatuh Tempo (*Due Date*).
+     * Catatan / Perjanjian.
+   - Form Pembayaran Cicilan / Pelunasan (Modal Action):
+     * Dompet Pembayaran (kas keluar jika bayar hutang, kas masuk jika terima piutang).
+     * Nominal Pembayaran.
+     * Tanggal Bayar.
+     * Catatan & Upload Bukti Pembayaran.
+
+C. PENGALAMAN MOBILE KHUSUS (MOBILE-PRESET PLUGIN)
+--------------------------------------------------------------------------------
+1. Bottom Navigation Bar:
+   - Bar navigasi bawah layar ponsel dengan 5 menu cepat:
+     [ Dasbor ]  [ Dompet ]  [ ( + ) Tambah ]  [ Transaksi ]  [ Menu Lain ]
+   - Tombol tengah `( + ) Tambah` memunculkan aksi instan: Catat Pengeluaran, 
+     Catat Pemasukan, atau Transfer Dompet.
+2. Stacked Table View:
+   - Pada layar smartphone (< 640px), seluruh tabel otomatis bertransformasi 
+     menjadi kartu vertikal tanpa scroll horizontal.
+3. Thumb-Reach Actions:
+   - Tombol konfirmasi, simpan, dan aksi utama diletakkan di bagian bawah layar 
+     agar mudah dijangkau satu tangan (ibu jari).
+
+
+6. ATURAN BISNIS & ALUR FINANSIAL (CORE RULES)
 --------------------------------------------------------------------------------
 1. Integritas Saldo Dompet (ACID Transaction):
    - Seluruh mutasi saldo dompet WAJIB dibungkus di dalam `DB::transaction()`.
@@ -292,23 +457,37 @@ F. PENDUKUNG (ATTACHMENTS)
        setelah akun dibuat, relasi tenant langsung terkonfirmasi.
 
 
-6. PEDOMAN OPTIMISASI PERFORMA & LOADING (HIGH SPEED GUIDELINES)
+7. PEDOMAN OPTIMISASI PERFORMA & LOADING (HIGH SPEED GUIDELINES)
 --------------------------------------------------------------------------------
-1. Filament UI & Data Loading:
+1. Blade Component Optimization (Livewire Blaze):
+   - Pasang package `livewire/blaze` via Composer:
+     `composer require livewire/blaze`
+   - Aktifkan optimasi direktori Blade di `AppServiceProvider`:
+     `Blaze::optimize()`
+   - Kompilasi static folding dan memoization ini mengeliminasi runtime overhead 
+     komponen Blade, menghasilkan render halaman 10-100ms+ lebih cepat per request.
+
+2. Profiling & Eliminasi N+1 (Laravel Debugbar):
+   - Pasang package `fruitcake/laravel-debugbar` untuk environment lokal:
+     `composer require fruitcake/laravel-debugbar --dev`
+   - Memonitor jumlah query SQL, execution time, dan memory footprint di setiap 
+     halaman panel untuk memastikan 0 N+1 query sebelum kode dirilis ke production.
+
+3. Filament UI & Data Loading:
    - Gunakan `->deferLoading()` pada semua Table Resource agar halaman terbuka instan 
      dan data dimuat secara asynchronously tanpa memblokir first-contentful-paint (FCP).
    - Tetapkan batas paginasi default yang efisien: `->defaultPaginationPageOption(15)`.
    - Hindari pemanggilan relasi N+1 di table column (gunakan `$record->wallet_name` 
      dari arsip denormalisasi atau eager loading resmi via `modifyQueryUsing(fn ($q) => $q->with(...))`).
 
-2. Query & Composite Indexing:
+4. Query & Composite Indexing:
    - Manfaatkan indeks komposit `(account_id, happened_at)` pada `transactions` 
      agar filter widget dashboard rentang tanggal bulanan/tahunan dieksekusi 
      dalam hitungan milidetik tanpa full-table scan.
    - Gunakan agregasi SQL murni (`selectRaw('SUM(...)')`) saat menghitung ringkasan 
      total balance dan cashflow daripada memanggil `.sum()` pada koleksi model Eloquent.
 
-3. Mobile & Frontend Assets:
+5. Mobile & Frontend Assets:
    - Plugin `hammadzafar05/filament-mobile-preset` meminimalkan elemen DOM yang berat 
      di viewport mobile.
    - Aktifkan route caching, config caching, dan view caching pada server production:
@@ -316,11 +495,14 @@ F. PENDUKUNG (ATTACHMENTS)
    - Pastikan PHP OPcache aktif pada server PHP 8.2+.
 
 
-7. REFERENSI & DOKUMENTASI RESMI
+8. REFERENSI & DOKUMENTASI RESMI
 --------------------------------------------------------------------------------
 - Laravel 13 Documentation       : https://laravel.com/framework/docs/13.x
+- Laravel Boost Documentation    : https://laravel.com/framework/docs/boost
+- Laravel Debugbar               : https://github.com/fruitcake/laravel-debugbar
 - Filament v5 Overview           : https://filamentphp.com/docs/5.x/introduction/overview
 - Filament v5 Multi-Tenancy      : https://filamentphp.com/docs/5.x/users/tenancy
+- Livewire Blaze (Blade Optimizer): https://github.com/livewire/blaze (https://blazephp.dev/)
 - Filament Mobile Preset         : https://filamentphp.com/plugins/hammadzafar05-mobile-preset
 - Filament Breezy Plugin         : https://filamentphp.com/plugins/jeffgreco-breezy
 ================================================================================
