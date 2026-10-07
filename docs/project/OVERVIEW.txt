@@ -608,7 +608,43 @@ untuk menjamin kestabilan arsitektur, kepatuhan TDD, dan pencegahan regresi:
     - Pest Tests: Penegakan otorisasi role di seluruh UI Filament.
 
 
-9. REFERENSI & DOKUMENTASI RESMI
+9. PANDUAN MEMULAI & EKSEKUSI PENGEMBANGAN (HOW TO GET STARTED)
+--------------------------------------------------------------------------------
+Untuk melanjutkan pengembangan proyek dari status saat ini, ikuti alur kerja baku berikut:
+
+1. Status Proyek Saat Ini:
+   - Fondasi Laravel 13, Filament v5, Breezy Auth, dan Pest telah dikonfigurasi.
+   - Dokumen perancangan arsitektur lengkap tersedia di:
+     docs/superpowers/specs/2026-10-07-dompetkita-core-architecture-design.md
+   - Rencana implementasi teknis detail untuk Milestone 1 tersedia di:
+     docs/superpowers/plans/2026-10-07-milestone-1-multi-tenancy-foundation.md
+
+2. Cara Memulai / Melanjutkan Milestone:
+   - Berikan instruksi langsung ke AI Assistant: "Lanjut Milestone 1" atau "Mulai Task 1".
+   - Pengerjaan dieksekusi secara berurutan dari Task 1 hingga Task 5 pada Milestone 1:
+     * Task 1: Enums Keanggotaan (AccountRole & MemberStatus) dengan Filament Contracts.
+     * Task 2: Migrasi Database Tenancy (accounts & account_member) + AccountFactory.
+     * Task 3: Model Eloquent & Relasi Tenant (Account & User).
+     * Task 4: Halaman Registrasi Tenant Filament v5 (RegisterAccount) & AppPanelProvider.
+     * Task 5: End-to-End Tenancy Isolation & Route Guard Tests.
+
+3. Siklus Standar Pengerjaan per Task (Disiplin TDD):
+   a. Red Stage   : Tulis test unit/feature Pest terlebih dahulu di folder tests/.
+   b. Verify Fail : Jalankan test untuk memastikan test gagal sesuai ekspektasi:
+                    php artisan test --compact --filter=NamaTest
+   c. Green Stage : Tulis kode implementasi seminimal mungkin hingga test berhasil.
+   d. Verify Pass : Jalankan kembali test Pest untuk memastikan seluruh asersi lulus.
+   e. Code Format : Jalankan linter otomatis Laravel Pint:
+                    vendor/bin/pint --dirty --format agent
+   f. Git Commit  : Lakukan commit per-task dengan format konvensional (feat, test, fix, refactor).
+
+4. Transisi ke Milestone Selanjutnya:
+   - Setelah seluruh test pada Milestone 1 lulus 100% (verifikasi via php artisan test --compact),
+     buat dokumen rencana implementasi (docs/superpowers/plans/...) untuk Milestone 2.
+   - Ulangi siklus TDD yang sama untuk menjaga integritas kode dan bebas regresi.
+
+
+10. REFERENSI & DOKUMENTASI RESMI
 --------------------------------------------------------------------------------
 - Laravel 13 Documentation       : https://laravel.com/framework/docs/13.x
 - Laravel Debugbar               : https://github.com/fruitcake/laravel-debugbar
