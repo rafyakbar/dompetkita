@@ -2,33 +2,39 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Membangun fondasi arsitektur multi-tenancy Filament v5 untuk DompetKita sehingga pengguna dapat mendaftar, membuat akun pembukuan (*Account*), beralih akun melalui tenant switcher, dan seluruh akses tenant terlindungi dari kebocoran (*leakage*).
+**Goal:** Membangun fondasi arsitektur multi-tenancy Filament v5 untuk DompetKita sehingga pengguna dapat mendaftar, membuat akun pembukuan (*Account*), beralih akun melalui tenant switcher, dan seluruh akses tenant terlindungi dari kebocoran (*leakage*) sesuai standar resmi Filament v5 dan Livewire v4.
 
-**Architecture:** Model `Account` dikonfigurasi sebagai tenant Filament v5 berbasis route slug (`/app/{slug}`). Relasi pengguna dengan tenant dikelola secara terpusat melalui tabel pivot `account_member`. Saat pengguna membuat akun, ia otomatis didaftarkan sebagai `owner` aktif di pivot, dan model `User` menerapkan interface `HasTenants` yang menyaring hanya akun dengan status aktif.
+**Architecture:** Model `Account` dikonfigurasi sebagai tenant Filament v5 berbasis route slug (`/app/{slug}`). Relasi pengguna dengan tenant dikelola secara terpusat melalui tabel pivot `account_member`. Saat pengguna membuat akun, ia otomatis didaftarkan sebagai `owner` aktif di pivot, dan model `User` menerapkan interface `HasTenants` serta `HasDefaultTenant`. Seluruh Enum keanggotaan mengimplementasikan kontrak Filament `HasLabel` dan `HasColor`.
 
-**Tech Stack:** Laravel 13, Filament v5, PHP 8.4 Backed Enums, Pest PHP testing framework, Laravel Pint.
+**Tech Stack:** Laravel 13, Filament v5, Livewire v4, PHP 8.4 Backed Enums, Pest PHP testing framework, Laravel Pint.
 
 **Spec:** [docs/superpowers/specs/2026-10-07-dompetkita-core-architecture-design.md](file:///C:/laragon/www/dompetkita/docs/superpowers/specs/2026-10-07-dompetkita-core-architecture-design.md)
+**Official References:**
+- [Laravel 13 Documentation Reference](file:///D:/Code/docs-and-skills/docs/laravel_v13/references.md)
+- [Livewire v4 Documentation Reference](file:///D:/Code/docs-and-skills/docs/livewire_v4/references.md)
+- [Filament v5 Multi-Tenancy Reference](file:///D:/Code/docs-and-skills/docs/filament_v5/references/095_multi-tenancy.md)
+- [Filament v5 Enum Tricks Reference](file:///D:/Code/docs-and-skills/docs/filament_v5/references/102_enum-tricks.md)
 
 ## Global Constraints
 
 - PHP 8.4 syntax, strict types, explicit return types.
 - Bebas DB ENUM: seluruh status dan tipe disimpan sebagai `string(20)` dan dicast ke PHP Backed Enums.
+- Filament v5 Enum Tricks: seluruh enum mengimplementasikan `Filament\Support\Contracts\HasLabel` dan `Filament\Support\Contracts\HasColor`.
 - Multi-tenancy Filament v5 berbasis `Account` dengan `slugAttribute: 'slug'`.
 - Format kode sebelum commit menggunakan `vendor/bin/pint --dirty --format agent`.
-- Seluruh pengujian menggunakan Pest PHP (`php artisan test --filter=...`).
+- Seluruh pengujian menggunakan Pest PHP (`php artisan test --compact --filter=...`).
 
 ## Review Focus
 
 1. **Slug Duplication Guard**: Dua akun dengan nama yang sama harus menghasilkan slug unik tanpa error collision.
 2. **Inactive Member Gate**: Pengguna dengan status keanggotaan `'invited'`, `'revoked'`, atau `'left'` tidak boleh bisa mengakses tenant (`/app/{slug}`).
 3. **Empty Tenant Redirect**: Pengguna login yang belum memiliki akun aktif harus otomatis dialihkan ke halaman registrasi tenant (`/app/new`).
-4. **Cross-Tenant Access Rejection**: Pengguna tidak dapat membuka dashboard tenant orang lain di mana ia bukan anggota aktif (ekspektasi: 404 / 403 Forbidden).
+4. **Cross-Tenant Access Rejection**: Pengguna tidak dapat membuka dashboard tenant orang lain di mana ia bukan anggota aktif (ekspektasi: 403 Forbidden / 404).
 5. **Cascade Deletion Integrity**: Penghapusan akun harus menghapus relasi di `account_member` secara bersih tanpa *orphaned records*.
 
 ---
 
-### Task 1: Membership Backed Enums (`AccountRole` & `MemberStatus`)
+### Task 1: Membership Backed Enums (`AccountRole` & `MemberStatus`) dengan Filament Contracts
 
 **Files:**
 - Create: `app/Enums/AccountRole.php`
@@ -37,8 +43,8 @@
 
 **Interfaces:**
 - Produces:
-  - `App\Enums\AccountRole`: `Owner = 'owner'`, `Member = 'member'`, `Viewer = 'viewer'`
-  - `App\Enums\MemberStatus`: `Invited = 'invited'`, `Active = 'active'`, `Left = 'left'`, `Revoked = 'revoked'`
+  - `App\Enums\AccountRole`: `Owner = 'owner'`, `Member = 'member'`, `Viewer = 'viewer'` (implements `HasLabel`, `HasColor`)
+  - `App\Enums\MemberStatus`: `Invited = 'invited'`, `Active = 'active'`, `Left = 'left'`, `Revoked = 'revoked'` (implements `HasLabel`, `HasColor`)
 
 - [ ] **Step 1: Write the failing unit test for membership enums**
 
@@ -47,18 +53,29 @@
 
 use App\Enums\AccountRole;
 use App\Enums\MemberStatus;
+use Filament\Support\Contracts\HasColor;
+use Filament\Support\Contracts\HasLabel;
 
-test('account roles have expected string values', function () {
+test('account roles have expected values, labels, and colors', function () {
     expect(AccountRole::Owner->value)->toBe('owner')
         ->and(AccountRole::Member->value)->toBe('member')
-        ->and(AccountRole::Viewer->value)->toBe('viewer');
+        ->and(AccountRole::Viewer->value)->toBe('viewer')
+        ->and(AccountRole::Owner)->toBeInstanceOf(HasLabel::class)
+        ->and(AccountRole::Owner)->toBeInstanceOf(HasColor::class)
+        ->and(AccountRole::Owner->getLabel())->toBe('Pemilik')
+        ->and(AccountRole::Member->getLabel())->toBe('Anggota')
+        ->and(AccountRole::Viewer->getLabel())->toBe('Pengamat');
 });
 
-test('member statuses have expected string values', function () {
+test('member statuses have expected values, labels, and colors', function () {
     expect(MemberStatus::Invited->value)->toBe('invited')
         ->and(MemberStatus::Active->value)->toBe('active')
         ->and(MemberStatus::Left->value)->toBe('left')
-        ->and(MemberStatus::Revoked->value)->toBe('revoked');
+        ->and(MemberStatus::Revoked->value)->toBe('revoked')
+        ->and(MemberStatus::Active)->toBeInstanceOf(HasLabel::class)
+        ->and(MemberStatus::Active)->toBeInstanceOf(HasColor::class)
+        ->and(MemberStatus::Active->getLabel())->toBe('Aktif')
+        ->and(MemberStatus::Invited->getLabel())->toBe('Diundang');
 });
 ```
 
@@ -75,11 +92,32 @@ Create `app/Enums/AccountRole.php`:
 
 namespace App\Enums;
 
-enum AccountRole: string
+use Filament\Support\Contracts\HasColor;
+use Filament\Support\Contracts\HasLabel;
+
+enum AccountRole: string implements HasColor, HasLabel
 {
     case Owner = 'owner';
     case Member = 'member';
     case Viewer = 'viewer';
+
+    public function getLabel(): ?string
+    {
+        return match ($this) {
+            self::Owner => 'Pemilik',
+            self::Member => 'Anggota',
+            self::Viewer => 'Pengamat',
+        };
+    }
+
+    public function getColor(): string | array | null
+    {
+        return match ($this) {
+            self::Owner => 'primary',
+            self::Member => 'info',
+            self::Viewer => 'gray',
+        };
+    }
 }
 ```
 
@@ -89,12 +127,35 @@ Create `app/Enums/MemberStatus.php`:
 
 namespace App\Enums;
 
-enum MemberStatus: string
+use Filament\Support\Contracts\HasColor;
+use Filament\Support\Contracts\HasLabel;
+
+enum MemberStatus: string implements HasColor, HasLabel
 {
     case Invited = 'invited';
     case Active = 'active';
     case Left = 'left';
     case Revoked = 'revoked';
+
+    public function getLabel(): ?string
+    {
+        return match ($this) {
+            self::Invited => 'Diundang',
+            self::Active => 'Aktif',
+            self::Left => 'Keluar',
+            self::Revoked => 'Dicabut',
+        };
+    }
+
+    public function getColor(): string | array | null
+    {
+        return match ($this) {
+            self::Invited => 'warning',
+            self::Active => 'success',
+            self::Left => 'gray',
+            self::Revoked => 'danger',
+        };
+    }
 }
 ```
 
@@ -108,7 +169,7 @@ Expected: PASS (2 tests passed).
 ```bash
 vendor/bin/pint --dirty --format agent
 git add app/Enums/ tests/Unit/Enums/
-git commit -m "feat(auth): create AccountRole and MemberStatus backed enums"
+git commit -m "feat(auth): create AccountRole and MemberStatus enums with Filament contracts"
 ```
 
 ---
@@ -283,8 +344,8 @@ git commit -m "feat(tenancy): add accounts and account_member migrations and Acc
 **Interfaces:**
 - Consumes: `App\Models\User`, `App\Enums\AccountRole`, `App\Enums\MemberStatus`
 - Produces:
-  - `App\Models\Account`: relasi `owner(): BelongsTo`, `members(): BelongsToMany`, boot hook untuk slug otomatis.
-  - `App\Models\User`: implements `Filament\Models\Contracts\HasTenants`, relasi `accounts(): BelongsToMany`, methods `getTenants(Panel $panel): Collection`, `canAccessTenant(Model $tenant): bool`.
+  - `App\Models\Account`: implements `Filament\Models\Contracts\HasCurrentTenantLabel`, relasi `owner(): BelongsTo`, `members(): BelongsToMany`, boot hook untuk slug otomatis.
+  - `App\Models\User`: implements `Filament\Models\Contracts\HasTenants`, `HasDefaultTenant`, relasi `accounts(): BelongsToMany`, methods `getTenants(Panel $panel): Collection`, `canAccessTenant(Model $tenant): bool`, `getDefaultTenant(Panel $panel): ?Model`.
 
 - [ ] **Step 1: Write failing test for Account and User tenancy relationships**
 
@@ -333,12 +394,14 @@ test('user only retrieves active accounts via getTenants contract', function () 
         'invited_at' => now(),
     ]);
 
-    $tenants = $user->getTenants(filament()->getCurrentOrDefaultPanel());
+    $panel = filament()->getCurrentOrDefaultPanel();
+    $tenants = $user->getTenants($panel);
 
     expect($tenants->pluck('id'))->toContain($activeAccount->id)
         ->and($tenants->pluck('id'))->not->toContain($invitedAccount->id)
         ->and($user->canAccessTenant($activeAccount))->toBeTrue()
-        ->and($user->canAccessTenant($invitedAccount))->toBeFalse();
+        ->and($user->canAccessTenant($invitedAccount))->toBeFalse()
+        ->and($user->getDefaultTenant($panel)?->id)->toBe($activeAccount->id);
 });
 ```
 
@@ -356,6 +419,7 @@ Create `app/Models/Account.php`:
 namespace App\Models;
 
 use Database\Factories\AccountFactory;
+use Filament\Models\Contracts\HasCurrentTenantLabel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -365,7 +429,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 #[Fillable(['owner_id', 'name', 'slug', 'currency_code', 'description'])]
-class Account extends Model
+class Account extends Model implements HasCurrentTenantLabel
 {
     /** @use HasFactory<AccountFactory> */
     use HasFactory, SoftDeletes;
@@ -388,6 +452,11 @@ class Account extends Model
         });
     }
 
+    public function getCurrentTenantLabel(): string
+    {
+        return 'Akun Aktif';
+    }
+
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
@@ -403,19 +472,18 @@ class Account extends Model
 ```
 
 Modify `app/Models/User.php`:
-Implement `Filament\Models\Contracts\HasTenants` and add `accounts()`, `getTenants()`, `canAccessTenant()`.
+Implement `Filament\Models\Contracts\HasTenants` and `HasDefaultTenant`:
 ```php
-// Tambahkan import:
 use App\Enums\MemberStatus;
+use Filament\Models\Contracts\HasDefaultTenant;
 use Filament\Models\Contracts\HasTenants;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Collection;
 
-// Update class declaration:
-class User extends Authenticatable implements FilamentUser, HasAvatar, HasTenants
+class User extends Authenticatable implements FilamentUser, HasAvatar, HasDefaultTenant, HasTenants
 {
-    // ... method casts, canAccessPanel, getFilamentAvatarUrl ...
+    // ... casts, canAccessPanel, getFilamentAvatarUrl ...
 
     public function accounts(): BelongsToMany
     {
@@ -434,6 +502,11 @@ class User extends Authenticatable implements FilamentUser, HasAvatar, HasTenant
     {
         return $this->accounts()->whereKey($tenant)->exists();
     }
+
+    public function getDefaultTenant(Panel $panel): ?Model
+    {
+        return $this->accounts()->first();
+    }
 }
 ```
 
@@ -447,7 +520,7 @@ Expected: PASS (2 tests passed).
 ```bash
 vendor/bin/pint --dirty --format agent
 git add app/Models/ tests/Feature/Tenancy/AccountModelTest.php
-git commit -m "feat(tenancy): implement Account model and User HasTenants contract"
+git commit -m "feat(tenancy): implement Account model and User HasTenants and HasDefaultTenant contracts"
 ```
 
 ---
@@ -462,7 +535,7 @@ git commit -m "feat(tenancy): implement Account model and User HasTenants contra
 **Interfaces:**
 - Consumes: `App\Models\Account`, `App\Models\User`, `App\Enums\AccountRole`, `App\Enums\MemberStatus`
 - Produces:
-  - `App\Filament\Pages\Tenancy\RegisterAccount`: Filament Tenant Registration Page.
+  - `App\Filament\Pages\Tenancy\RegisterAccount`: Filament Tenant Registration Page extending `Filament\Pages\Tenancy\RegisterTenant` with Filament 5 `Schema` signature.
   - `AppPanelProvider`: konfigurasi `$panel->tenant(Account::class, slugAttribute: 'slug')->tenantRegistration(RegisterAccount::class)`.
 
 - [ ] **Step 1: Write failing test for Tenant Registration and Redirect**
@@ -570,7 +643,7 @@ return $panel
     ->passwordReset()
     ->tenant(Account::class, slugAttribute: 'slug')
     ->tenantRegistration(RegisterAccount::class)
-    // ... konfigurasi lainnya ...
+    // ... middleware dan plugins ...
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -687,7 +760,9 @@ git commit -m "test(tenancy): add comprehensive end-to-end tests for account reg
 ## Plan Review Checklist
 
 - [x] Every task has explicit file paths for creation, modification, and testing.
-- [x] Exact function signatures and interfaces are documented between tasks.
+- [x] Filament v5 SDUI Schema signatures (`form(Schema $schema): Schema`) are used.
+- [x] Filament v5 Enum Contracts (`HasLabel`, `HasColor`) are incorporated into Backed Enums.
+- [x] Filament v5 Tenancy Contracts (`HasTenants`, `HasDefaultTenant`, `HasCurrentTenantLabel`) are used.
 - [x] TDD cycle (Red -> Green -> Refactor -> Commit) is explicitly baked into every task.
 - [x] All global constraints from the architecture design spec are respected.
 - [x] Pint formatting and Git commit commands are specified for each task.
