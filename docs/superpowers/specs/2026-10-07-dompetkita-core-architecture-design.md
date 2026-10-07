@@ -23,10 +23,9 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 1. **Strategi Mata Uang (Single-Currency per Tenant)**:
    - Setiap `Account` memiliki satu mata uang acuan (`currency_code`, default: `IDR`).
    - Seluruh dompet di bawah akun tersebut menggunakan mata uang yang sama. Pengelolaan aset dalam mata uang asing (valas) dilakukan dengan membuat entitas Akun Pembukuan terpisah.
-2. **Buku Besar Tanpa Snapshot Saldo Kolom (`Immutable-Friendly Ledger`)**:
-   - Kolom `wallet_balance_before` dan `wallet_balance_after` **ditiadakan** dari tabel `transactions`.
-   - Transaksi mencatat pergerakan riil (`amount`, `direction`, `happened_at`). Saldo berjalan (*running balance*) dihitung dinamis via SQL Window Function saat laporan rekening koran dibuka.
-   - Mengizinkan input transaksi mundur (*backdated*) serta edit/hapus transaksi secara aman tanpa merusak kebenaran data baris-baris historis lainnya.
+2. **Buku Besar Mutasi Kas Riil (`Pure Event Ledger`)**:
+   - Transaksi murni mencatat pergerakan riil (`amount`, `direction`, `happened_at`). Saldo berjalan (*running balance*) dihitung secara dinamis via SQL Window Function saat laporan rekening koran dibuka.
+   - Desain ini mendukung input transaksi mundur (*backdated*) serta edit/hapus transaksi secara aman tanpa merusak kebenaran data baris-baris historis lainnya.
 3. **Integritas Konkurensi Saldo**:
    - Seluruh pembaruan saldo wajib dibungkus dalam `DB::transaction()` dengan pessimistic lock:
      `$wallet = Wallet::where('id', $walletId)->lockForUpdate()->first()`.

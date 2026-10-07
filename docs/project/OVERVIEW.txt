@@ -35,11 +35,11 @@ Tech Stack    : - Framework      : Laravel 13.x (PHP 8.2+)
    - Seluruh dompet di bawah akun tersebut menggunakan mata uang yang sama. Pengelolaan aset
      valas dilakukan dengan membuat akun pembukuan terpisah guna menjaga akurasi 100% tanpa selisih kurs.
 
-3. Immutable-Friendly Ledger (Tanpa Snapshot Saldo di Baris Transaksi):
-   - Kolom `wallet_balance_before` dan `wallet_balance_after` ditiadakan dari tabel `transactions`.
-   - Transaksi mencatat mutasi kas riil (`amount`, `direction`, `happened_at`). Saldo berjalan
-     (running balance) dapat dihitung secara dinamis via SQL Window Function saat laporan rekening
-     koran dibuka. Ini mengizinkan input transaksi mundur (backdated) dan edit/hapus secara aman.
+3. Pure Event Ledger (Buku Besar Mutasi Kas Riil):
+   - Tabel `transactions` murni mencatat pergerakan kas riil (`amount`, `direction`, `happened_at`).
+   - Saldo berjalan (running balance) dihitung secara dinamis via SQL Window Function saat laporan
+     rekening koran dibuka. Pendekatan ini memungkinkan input transaksi mundur (backdated) dan
+     edit/hapus secara aman tanpa merusak kebenaran data baris-baris historis lainnya.
 
 4. Integritas Saldo Mutlak & Concurrency Guard:
    - Seluruh mutasi saldo dompet WAJIB dibungkus di dalam `DB::transaction()` dengan pessimistic
