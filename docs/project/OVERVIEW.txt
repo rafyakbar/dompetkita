@@ -7,8 +7,8 @@
 Nama Aplikasi : DompetKita
 Tujuan        : Aplikasi manajemen dan pencatatan keuangan modern multi-akun
                 (multi-tenant) untuk kebutuhan personal, rumah tangga (keluarga),
-                maupun usaha kecil dengan fokus utama pada kecepatan loading
-                dan pengalaman mobile yang mulus.
+                maupun usaha kecil dengan fokus utama pada kecepatan loading,
+                integritas saldo mutlak, dan pengalaman mobile yang mulus.
 Tech Stack    : - Framework      : Laravel 13.x (PHP 8.2+)
                 - UI Engine      : Filament PHP v5.x (Livewire v4)
                 - Blade Optimizer: livewire/blaze (https://blazephp.dev/)
@@ -30,11 +30,26 @@ Tech Stack    : - Framework      : Laravel 13.x (PHP 8.2+)
      menggunakan fitur resmi PHP 8.1+ Backed Enums (misal: `App\Enums\TransactionType`)
      dan Eloquent Model Attribute Casting (`$casts`).
 
-2. Performance-First & Fast Loading (Kecepatan Maksimal):
+2. Single-Currency per Tenant Architecture:
+   - Setiap Akun Pembukuan (`Account`) menetapkan satu mata uang pelaporan (`currency_code`, default IDR).
+   - Seluruh dompet di bawah akun tersebut menggunakan mata uang yang sama. Pengelolaan aset
+     valas dilakukan dengan membuat akun pembukuan terpisah guna menjaga akurasi 100% tanpa selisih kurs.
+
+3. Immutable-Friendly Ledger (Tanpa Snapshot Saldo di Baris Transaksi):
+   - Kolom `wallet_balance_before` dan `wallet_balance_after` ditiadakan dari tabel `transactions`.
+   - Transaksi mencatat mutasi kas riil (`amount`, `direction`, `happened_at`). Saldo berjalan
+     (running balance) dapat dihitung secara dinamis via SQL Window Function saat laporan rekening
+     koran dibuka. Ini mengizinkan input transaksi mundur (backdated) dan edit/hapus secara aman.
+
+4. Integritas Saldo Mutlak & Concurrency Guard:
+   - Seluruh mutasi saldo dompet WAJIB dibungkus di dalam `DB::transaction()` dengan pessimistic
+     locking (`lockForUpdate()`) untuk mencegah race condition (Lost Update) di MySQL & PostgreSQL.
+   - Disediakan rutin rekonsiliasi bawaan (`php artisan wallet:reconcile`) sebagai mekanisme *self-healing*.
+
+5. Performance-First & Fast Loading (Kecepatan Maksimal):
    - Blade Compilation Optimization (Livewire Blaze):
-     Menggunakan `livewire/blaze` untuk mengompilasi anonymous Blade components ke
-     optimized PHP functions pada compile-time, memangkas 91-97% overhead rendering
-     komponen UI.
+     Menggunakan `livewire/blaze` terarah khusus untuk views kustom aplikasi:
+     `Blaze::optimize()->in(resource_path('views'))` guna memangkas overhead komponen Blade kustom.
    - Database Indexing Optimal: Seluruh foreign key dan kolom pencarian/sorting
      (`account_id`, `happened_at`, `status`, `slug`, `order`) diberi indeks.
    - Composite Indexing untuk Tenancy: Menambahkan indeks gabungan seperti
@@ -43,19 +58,21 @@ Tech Stack    : - Framework      : Laravel 13.x (PHP 8.2+)
    - Denormalisasi Terkontrol: Kolom `account_id` dipasang langsung di tabel operasional
      (`budgets`, `transactions`, `transfers`, `debts`) untuk meniadakan query `JOIN`
      bertingkat saat scoping tenant di Filament.
+   - Polymorphic Optimization: Menerapkan `Relation::enforceMorphMap` agar kolom polymorphic
+     hanya menyimpan key pendek alih-alih FQCN class lengkap.
    - Profiling Ketat dengan Laravel Debugbar: Seluruh query, N+1 detection, memory
      usage, dan rendering timeline diaudit secara real-time selama development.
    - Filament Table Optimization: Menerapkan `deferLoading()` pada seluruh tabel,
      menghindari query N+1, dan membatasi ukuran paginasi default (15-20 data per halaman).
 
-3. Mobile-First Experience (Optimal di Ponsel):
+6. Mobile-First Experience (Optimal di Ponsel):
    - Memanfaatkan plugin `hammadzafar05/filament-mobile-preset` yang menyediakan:
      * Bottom Navigation Bar untuk navigasi cepat yang mudah dijangkau ibu jari (*thumb-reach*).
      * Stacked Tables: Baris tabel bertransformasi rapi menjadi kartu di layar < 640px
        tanpa perlu scroll horizontal.
      * Slide-over modal sebagai standar penginputan data agar alur pengguna tetap fokus.
 
-4. AI-Assisted Architecture & Standards (Laravel Boost):
+7. AI-Assisted Architecture & Standards (Laravel Boost):
    - Terintegrasi dengan Laravel Boost (`https://laravel.com/framework/docs/boost`)
      sebagai MCP server resmi untuk memandu AI coding agents dalam memahami skema DB,
      routes, best practices Laravel 13, dan konvensi proyek yang tersimpan di `.ai/rules`.
@@ -63,11 +80,18 @@ Tech Stack    : - Framework      : Laravel 13.x (PHP 8.2+)
 
 3. ARSITEKTUR MULTI-TENANCY & HAK AKSES
 --------------------------------------------------------------------------------
-- Tenant Utama: `Account` (Akun Pembukuan).
+- Tenant Utama: `Account` (Akun Pembukuan, route key: `slug`).
   Satu user dapat memiliki banyak akun (misal: "Keuangan Pribadi", "Keuangan Rumah Tangga").
 - Manajemen Anggota: `account_member`.
-  Pemilik akun (`owner`) dapat mengundang user lain (`member` / `viewer`)
-  untuk mencatat atau memantau keuangan bersama.
+  * Tabel pivot `account_member` menjadi satu-satunya sumber relasi keanggotaan.
+  * Saat user membuat akun, ia otomatis didaftarkan ke `account_member` dengan role `'owner'`
+    dan status `'active'`.
+  * Relasi Filament `HasTenants` (`$user->accounts()`) secara ketat memfilter hanya akun
+    dengan `status = 'active'`.
+  * Hak akses operasional dikendalikan oleh Laravel Policy per-resource:
+    - `owner`  : Hak penuh (CRUD operasional, kelola member, hapus akun).
+    - `member` : Hak operasional penuh (CRUD transaksi, dompet, kategori, anggaran, hutang).
+    - `viewer` : Read-only (hanya memantau dashboard, tabel, dan laporan).
 
 
 4. SPESIFIKASI SKEMA DATABASE (NO DB ENUMS)
@@ -85,7 +109,7 @@ A. CORE & OTENTIKASI
    - password            : string
    - two_factor_secret   : text (nullable, Breezy 2FA)
    - two_factor_recovery : text (nullable, Breezy 2FA)
-   - avatar_url          : string (nullable)
+   - avatar_url          : string(500), nullable
    - remember_token      : string (nullable)
    - timestamps
 
@@ -104,9 +128,9 @@ A. CORE & OTENTIKASI
    Deskripsi: Menghubungkan user ke akun beserta status dan hak aksesnya.
    - id               : id (primary key)
    - account_id       : foreignId -> accounts.id (cascade on delete)
-   - user_id          : foreignId -> users.id, nullable (diisi saat user sudah terdaftar)
+   - user_id          : foreignId -> users.id, nullable (diisi saat user sudah terdaftar/klaim)
    - email            : string, index (email tujuan undangan)
-   - invitation_token : string, nullable, unique (token untuk klaim undangan)
+   - invitation_token : string(64), nullable, unique (token untuk klaim undangan)
    - role             : string(20), default('member'), index
                         (pilihan via PHP Enum: owner, member, viewer)
    - status           : string(20), default('invited'), index
@@ -128,15 +152,15 @@ B. MASTER DATA KEUANGAN
    - account_id      : foreignId -> accounts.id (cascade on delete)
    - name            : string, index (contoh: "Bank UOB", "BCA", "Dompet Tunai")
    - slug            : string, index
-   - currency_code   : string(3), default('IDR') (mendukung dompet multi-currency)
-   - icon            : string, nullable
-   - color           : string, nullable
+   - icon            : string(100), nullable
+   - color           : string(50), nullable
    - current_balance : decimal(24, 2), default(0.00), index
-                       (saldo riil saat ini, dikelola otomatis via DB Transaction)
+                       (saldo riil saat ini, dikelola otomatis via DB Transaction + lockForUpdate)
    - allow_minus     : boolean, default(false), index (apakah saldo boleh bernilai minus)
    - timestamps
    - softDeletes
-   - Constraint      : unique(account_id, slug, deleted_at)
+   - Indexing        : index(account_id, slug), index(account_id, current_balance)
+   - Validasi Unik   : Ditegakkan di level aplikasi via Rule::unique('wallets', 'name')->where('account_id', $accountId)->whereNull('deleted_at')
 
 5. categories (Kategori Pemasukan & Pengeluaran)
    Deskripsi: Klasifikasi transaksi keuangan per akun.
@@ -146,50 +170,49 @@ B. MASTER DATA KEUANGAN
    - slug       : string, index
    - type       : string(20), index
                   (pilihan via PHP Enum: income, expense)
-   - is_system  : boolean, default(false), index (kategori bawaan template)
-   - icon       : string, nullable, index
-   - color      : string, nullable, index
-   - order      : unsignedBigInteger, default(0), index (urutan sorting tampilan)
+   - is_system  : boolean, default(false), index (kategori bawaan sistem/template)
+   - icon       : string(100), nullable, index
+   - color      : string(50), nullable, index
+   - order      : unsignedInteger, default(0), index (urutan sorting tampilan)
    - status     : string(20), default('active'), index
                   (pilihan via PHP Enum: active, inactive)
    - timestamps
    - softDeletes
-   - Constraint : unique(account_id, slug, deleted_at)
-                  unique(account_id, name, deleted_at)
+   - Indexing   : index(account_id, type), index(account_id, slug)
+   - Validasi Unik: Ditegakkan di level aplikasi via Rule::unique('categories', 'name')->where('account_id', $accountId)->whereNull('deleted_at')
 
 --------------------------------------------------------------------------------
 C. TRANSAKSI & MUTASI
 --------------------------------------------------------------------------------
 
-6. transactions (Mutasi Keuangan Utama)
-   Deskripsi: Buku besar (ledger) seluruh pergerakan uang masuk dan keluar.
-   - id                    : id (primary key)
-   - account_id            : foreignId -> accounts.id (cascade on delete)
-   - wallet_id             : foreignId -> wallets.id (restrict / cascade)
-   - category_id           : foreignId -> categories.id, nullable
-                             (wajib untuk 'transaction', null untuk 'transfer')
-   - type                  : string(20), index
-                             (pilihan via PHP Enum: transaction, transfer)
-   - direction             : smallInteger [1: Pemasukan, -1: Pengeluaran], index
-   - amount                : decimal(24, 2), index (nominal transaksi, selalu positif)
-   - wallet_balance_before : decimal(24, 2), index (snapshot saldo sebelum mutasi)
-   - wallet_balance_after  : decimal(24, 2), index (snapshot saldo setelah mutasi)
-   - category_name         : string, nullable (arsip denormalisasi untuk kecepatan history)
-   - wallet_name           : string (arsip denormalisasi nama dompet)
-   - happened_at           : timestamp, index (waktu transaksi riil terjadi)
-   - note                  : text, nullable
+6. transactions (Buku Besar / Ledger Mutasi Kas)
+   Deskripsi: Buku besar seluruh pergerakan uang masuk dan keluar riil.
+   - id            : id (primary key)
+   - account_id    : foreignId -> accounts.id (cascade on delete)
+   - wallet_id     : foreignId -> wallets.id (restrict on delete)
+   - category_id   : foreignId -> categories.id, nullable (restrict on delete)
+   - transfer_id   : foreignId -> transfers.id, nullable (cascade on delete)
+   - type          : string(20), index
+                     (pilihan via PHP Enum: transaction, transfer)
+   - direction     : smallInteger [1: Pemasukan, -1: Pengeluaran], index
+   - amount        : decimal(24, 2), index (nominal transaksi, selalu positif)
+   - category_name : string(255), nullable (arsip denormalisasi untuk kecepatan history)
+   - wallet_name   : string(255) (arsip denormalisasi nama dompet)
+   - happened_at   : timestamp, index (waktu transaksi riil terjadi)
+   - note          : text, nullable
    - timestamps
-   - Performance Index     : index(account_id, happened_at) -> query rentang tanggal instan
+   - Performance Index: index(account_id, happened_at) -> query rentang tanggal instan
+   - Sort Order Baku  : happened_at DESC, id DESC
 
 7. transfers (Transfer Antar Dompet)
    Deskripsi: Header pemindahan dana antar dompet (Double-Entry Bookkeeping).
    - id                  : id (primary key)
    - account_id          : foreignId -> accounts.id (cascade on delete)
-   - from_wallet_id      : foreignId -> wallets.id
-   - to_wallet_id        : foreignId -> wallets.id
-   - from_transaction_id : foreignId -> transactions.id (transaksi keluar, direction: -1)
-   - to_transaction_id   : foreignId -> transactions.id (transaksi masuk, direction: 1)
-   - fee_transaction_id  : foreignId -> transactions.id, nullable (transaksi biaya admin jika ada)
+   - from_wallet_id      : foreignId -> wallets.id (restrict on delete)
+   - to_wallet_id        : foreignId -> wallets.id (restrict on delete)
+   - from_transaction_id : foreignId -> transactions.id, nullable
+   - to_transaction_id   : foreignId -> transactions.id, nullable
+   - fee_transaction_id  : foreignId -> transactions.id, nullable
    - amount              : decimal(24, 2), index (nominal dana yang dipindahkan)
    - fee_amount          : decimal(24, 2), default(0.00), index (nominal biaya transfer)
    - happened_at         : timestamp, index
@@ -210,11 +233,13 @@ D. ANGGARAN (BUDGETING)
    - alert_percentage : unsignedSmallInteger, default(80)
                         (persentase peringatan dashboard saat pengeluaran mendekati plafon)
    - period_type      : string(20), index
-                        (pilihan via PHP Enum: weekly, monthly, yearly)
-   - period_start     : timestamp
-   - period_end       : timestamp (harus > period_start)
+                        (pilihan via PHP Enum: monthly, custom)
+   - year             : unsignedSmallInteger, nullable (untuk periode bulanan)
+   - month            : unsignedTinyInteger, nullable (untuk periode bulanan)
+   - period_start     : timestamp, nullable
+   - period_end       : timestamp, nullable
    - timestamps
-   - Constraint       : unique(category_id, period_start, period_end)
+   - Constraint       : unique(category_id, year, month)
    - Performance Index: index(account_id, period_start, period_end)
 
 --------------------------------------------------------------------------------
@@ -225,11 +250,10 @@ E. HUTANG & PIUTANG (DEBTS)
    Deskripsi: Mencatat pinjaman yang harus dibayar (payable) atau piutang yang harus ditagih (receivable).
    - id                     : id (primary key)
    - account_id             : foreignId -> accounts.id (cascade on delete)
-   - wallet_id              : foreignId -> wallets.id
-                              (dompet penerima pencairan hutang atau sumber pengeluaran piutang)
+   - wallet_id              : foreignId -> wallets.id (restrict on delete)
    - initial_transaction_id : foreignId -> transactions.id, nullable
                               (transaksi otomatis di dompet saat hutang/piutang pertama dibuat)
-   - counterparty_name      : string, index (nama orang/lembaga yang berpiutang/berhutang)
+   - counterparty_name      : string(255), index (nama orang/lembaga yang berpiutang/berhutang)
    - type                   : string(20), index
                               (pilihan via PHP Enum: payable, receivable)
                               - payable    : Kita berhutang (kewajiban bayar)
@@ -246,7 +270,7 @@ E. HUTANG & PIUTANG (DEBTS)
     Deskripsi: Riwayat pembayaran berkala yang memotong sisa hutang/piutang.
     - id             : id (primary key)
     - debt_id        : foreignId -> debts.id (cascade on delete)
-    - transaction_id : foreignId -> transactions.id (transaksi mutasi kas dompet pembayaran)
+    - transaction_id : foreignId -> transactions.id (restrict on delete)
     - amount         : decimal(24, 2), default(0.00) (nominal yang dibayarkan)
     - paid_at        : timestamp, index
     - timestamps
@@ -258,10 +282,10 @@ F. PENDUKUNG (ATTACHMENTS)
 11. attachments (Lampiran File Polymorphic)
     Deskripsi: Menyimpan berkas bukti transfer, nota, struk, atau dokumen terkait.
     - id              : id (primary key)
-    - attachable_type : string, index (contoh: App\Models\Transaction, App\Models\Debt)
+    - attachable_type : string(100), index (menggunakan Relation::enforceMorphMap)
     - attachable_id   : unsignedBigInteger, index
-    - file_path       : text (lokasi file di storage)
-    - mime_type       : string, index
+    - file_path       : string(500) (lokasi file di storage)
+    - mime_type       : string(100), index
     - size            : unsignedBigInteger, index (ukuran berkas dalam bytes)
     - timestamps
     - softDeletes
@@ -278,7 +302,7 @@ A. HEADER, TOPBAR & TENANT SWITCHER
      saat ini (contoh: "Keuangan Pribadi").
    - Ketika diklik, menampilkan dropdown menu:
      * Daftar Akun: Menampilkan daftar seluruh akun milik user (`owned`) dan akun
-       tempat user terdaftar sebagai anggota (`member`). User dapat berganti konteks
+       tempat user terdaftar sebagai anggota aktif (`member`). User dapat berganti konteks
        pembukuan dengan 1 kali klik tanpa logout.
      * Daftarkan Akun Baru (`RegisterAccount`): Membuka form untuk membuat akun
        pembukuan baru (misal: "Keuangan Rumah Tangga").
@@ -301,8 +325,8 @@ B. MENU SIDEBAR (DESKTOP) & BOTTOM NAV (MOBILE)
 1. Dasbor (Dashboard)
    - Widget Statistik Ringkasan (Stats Overview):
      * Total Saldo Kas: Akumulasi saldo seluruh dompet aktif dalam format mata uang (Rp).
-     * Total Pemasukan Bulan Ini: Badge hijau dengan indikator trend naik/turun.
-     * Total Pengeluaran Bulan Ini: Badge merah dengan indikator trend naik/turun.
+     * Total Pemasukan Bulan Ini: Badge hijau dengan filter opsional sertakan/kecualikan transfer.
+     * Total Pengeluaran Bulan Ini: Badge merah dengan filter opsional sertakan/kecualikan transfer.
      * Total Sisa Hutang & Piutang: Ringkasan total kewajiban bayar dan hak tagih aktif.
    - Widget Grafik Finansial (ApexCharts):
      * Grafik Arus Kas (TransactionChart): Perbandingan bar/area chart pemasukan vs pengeluaran
@@ -317,10 +341,11 @@ B. MENU SIDEBAR (DESKTOP) & BOTTOM NAV (MOBILE)
 
 2. Dompet (Wallets)
    - Tampilan Tabel / Kartu:
-     * Menampilkan daftar dompet: Ikon & Warna, Nama Dompet, Mata Uang (`IDR`),
+     * Menampilkan daftar dompet: Ikon & Warna, Nama Dompet, Mata Uang Akun,
        Saldo Saat Ini (`current_balance` diformat mata uang tebal), dan status Boleh Minus.
      * Tab Filter Cepat: Semua Dompet, Kas/Tunai, Bank, Tabungan.
      * Filter Tong Sampah (*TrashedFilter*) untuk melihat dan memulihkan dompet terhapus.
+     * Tombol Aksi: "Rekonsiliasi Saldo" untuk self-healing saldo jika terjadi desinkronisasi.
    - Aksi Tiap Baris:
      * Ubah (Membuka Slide-Over Modal).
      * Hapus (Soft Delete ke tong sampah).
@@ -328,7 +353,6 @@ B. MENU SIDEBAR (DESKTOP) & BOTTOM NAV (MOBILE)
    - Form Tambah / Ubah Dompet (Slide-Over Modal):
      * Nama Dompet (contoh: "Bank UOB", "Dompet Tunai").
      * Saldo Awal (hanya diisi saat pembuatan pertama).
-     * Mata Uang (default: IDR).
      * Ikon (IconPicker) & Warna (ColorPicker).
      * Toggle "Boleh Minus" (`allow_minus`).
 
@@ -347,7 +371,7 @@ B. MENU SIDEBAR (DESKTOP) & BOTTOM NAV (MOBILE)
 4. Transaksi (Transactions & Transfers)
    - Tampilan Tabel Mutasi:
      * Tanggal & Waktu (`happened_at`), Tipe Mutasi (Badge: Pemasukan / Pengeluaran / Transfer),
-       Nominal (format mata uang hijau/merah), Dompet Terkait, Kategori (tampil strip `—` jika transfer),
+       Nominal (format mata uang hijau/merah), Dompet Terkait, Kategori (kategori sistem untuk transfer),
        Catatan, Bukti Struk/Lampiran.
    - Filter Lengkap:
      * Rentang Tanggal (Date Range Picker), Dompet, Kategori, Tipe Mutasi.
@@ -366,20 +390,19 @@ B. MENU SIDEBAR (DESKTOP) & BOTTOM NAV (MOBILE)
      * Dompet Asal (`from_wallet_id`).
      * Dompet Tujuan (`to_wallet_id`, otomatis dicegah memilih dompet yang sama).
      * Nominal Dana yang Ditransfer.
-     * Biaya Admin / Fee (opsional, misal biaya transfer beda bank).
+     * Biaya Admin / Fee (opsional, memotong dompet asal).
      * Tanggal & Waktu Transfer.
      * Catatan & Bukti Transfer.
 
 5. Anggaran (Budgets)
    - Tampilan Tabel:
-     * Kategori Belanja, Periode (Mingguan / Bulanan / Tahunan), Plafon Anggaran,
+     * Kategori Belanja, Periode (Bulanan: Bulan & Tahun / Custom), Plafon Anggaran,
        Pengeluaran Terpakai, Progress Bar Visual dengan indikator warna (Hijau aman,
        Kuning waspada, Merah overbudget).
    - Form Anggaran (Slide-Over Modal):
      * Kategori Belanja (hanya kategori bertipe Expense).
      * Plafon Anggaran (`max_amount`).
-     * Tipe Periode (`period_type`: Mingguan, Bulanan, Tahunan).
-     * Tanggal Mulai (`period_start`) & Selesai (`period_end`).
+     * Tipe Periode: Bulanan (Pilih Bulan & Tahun) atau Custom (Rentang Tanggal).
      * Persentase Alert (`alert_percentage`, default: 80%).
 
 6. Hutang & Piutang (Debts)
@@ -393,8 +416,8 @@ B. MENU SIDEBAR (DESKTOP) & BOTTOM NAV (MOBILE)
      * Nama Pihak Terkait (*Counterparty*).
      * Tipe: Hutang (*Payable*) atau Piutang (*Receivable*).
      * Dompet Terkait:
-       - Jika Hutang: Dompet penerima pencairan uang (saldo bertambah).
-       - Jika Piutang: Dompet sumber pinjaman (saldo berkurang).
+       - Jika Hutang: Dompet penerima pencairan uang (saldo kas otomatis bertambah).
+       - Jika Piutang: Dompet sumber pinjaman (saldo kas otomatis berkurang).
      * Nominal Pokok Pinjaman.
      * Tanggal Jatuh Tempo (*Due Date*).
      * Catatan / Perjanjian.
@@ -421,40 +444,56 @@ C. PENGALAMAN MOBILE KHUSUS (MOBILE-PRESET PLUGIN)
 
 6. ATURAN BISNIS & ALUR FINANSIAL (CORE RULES)
 --------------------------------------------------------------------------------
-1. Integritas Saldo Dompet (ACID Transaction):
-   - Seluruh mutasi saldo dompet WAJIB dibungkus di dalam `DB::transaction()`.
+1. Integritas Saldo Dompet (ACID Transaction & Concurrency Guard):
+   - Seluruh mutasi saldo dompet WAJIB dibungkus di dalam `DB::transaction()` dengan pessimistic
+     lock: `$wallet = Wallet::where('id', $walletId)->lockForUpdate()->first();`.
    - Formula Update:
      `new_balance = current_balance + (direction * amount)`
-   - Kolom `wallet_balance_before` dan `wallet_balance_after` selalu dihitung dan
-     disimpan di tabel `transactions` untuk audit trail yang presisi.
+   - Cek batas saldo minus: Jika `new_balance < 0` dan `allow_minus = false`, lemparkan exception.
 
-2. Alur Transfer Antar Dompet:
-   - Transfer menghasilkan 1 row di tabel `transfers` dan 2 row di `transactions`:
-     * Dari Dompet Asal : `direction: -1`, `type: 'transfer'`, `category_id: null`.
-     * Ke Dompet Tujuan : `direction: 1`,  `type: 'transfer'`, `category_id: null`.
-     * Biaya Admin (jika ada): 1 row transaksi pengeluaran tambahan (`direction: -1`).
-   - Karena `category_id` bernilai null pada transfer, statistik Pengeluaran Riil
-     di dashboard bulanan TIDAK AKAN rusak/membengkak.
+2. Alur Reversal Transaksi (Edit & Delete):
+   - Saat Transaksi Dihapus:
+     `wallet->current_balance -= (direction * amount)` (pembalikan saldo).
+   - Saat Transaksi Diubah (Nominal atau Dompet Berubah):
+     * Saldo lama dikembalikan ke dompet lama.
+     * Saldo baru diterapkan ke dompet baru.
+     * Seluruh proses dieksekusi dalam satu transaksi DB terkunci.
 
-3. Alur Pencatatan Hutang & Piutang:
+3. Alur Transfer Antar Dompet:
+   - Mengunci kedua dompet secara berurutan berdasarkan ID (`orderBy('id')`) untuk mencegah deadlocks.
+   - Transfer menghasilkan 1 row di tabel `transfers` dan minimal 2 row di `transactions`:
+     * Dari Dompet Asal : `direction: -1`, `type: 'transfer'`, `transfer_id: $transfer->id`,
+       `category_id: $sysCatTransferOut->id`.
+     * Ke Dompet Tujuan : `direction: 1`,  `type: 'transfer'`, `transfer_id: $transfer->id`,
+       `category_id: $sysCatTransferIn->id`.
+     * Biaya Admin (jika ada): 1 row transaksi pengeluaran tambahan pada dompet asal (`direction: -1`),
+       `category_id: $sysCatTransferFee->id`.
+   - Di dashboard/laporan statistik, user memiliki toggle filter untuk menyertakan atau mengecualikan
+     transaksi bertipe `transfer` dari perhitungan pengeluaran/pemasukan operasional.
+
+4. Alur Pencatatan Hutang & Piutang:
    - Saat membuat Hutang (Payable):
+     * User wajib memilih dompet kas penerima.
      * Saldo dompet penerima otomatis bertambah (`direction: 1`).
-     * `initial_transaction_id` otomatis terisi menautkan transaksi tersebut.
+     * `initial_transaction_id` otomatis terisi menautkan transaksi kas tersebut.
    - Saat membuat Piutang (Receivable):
+     * User wajib memilih dompet kas sumber.
      * Saldo dompet sumber otomatis berkurang (`direction: -1`).
-     * `initial_transaction_id` otomatis terisi menautkan transaksi tersebut.
+     * `initial_transaction_id` otomatis terisi menautkan transaksi kas tersebut.
    - Pembayaran cicilan (`debt_payments`):
-     * Memotong saldo pokok (`paid_amount += payment.amount`).
+     * Memotong saldo pokok hutang (`paid_amount += payment.amount`).
      * Menghasilkan transaksi dompet sesuai aliran dana (bayar hutang = uang keluar, terima piutang = uang masuk).
 
-4. Alur Multi-Tenancy & Undangan Member:
+5. Alur Multi-Tenancy & Undangan Member:
    - Tenant Model adalah `Account`.
    - Menggunakan relasi `HasTenants` bawaan Filament v5.
-   - Jika calon anggota diundang:
-     * Dibuat record di `account_member` dengan status `'invited'`.
-     * Jika email sudah terdaftar, notifikasi/undangan muncul di panel.
-     * Jika email belum terdaftar, sistem menyediakan link registrasi ber-token;
-       setelah akun dibuat, relasi tenant langsung terkonfirmasi.
+   - Saat user membuat akun, ia otomatis di-insert ke pivot `account_member` dengan `role = 'owner'`
+     dan `status = 'active'`.
+   - Jika calon anggota diundang via email:
+     * Dibuat record di `account_member` dengan status `'invited'` dan `invitation_token`.
+     * Tautan `/invitations/{token}` memandu user baru mendaftar dengan email terkunci, atau
+       memandu user yang sudah login untuk menerima undangan dalam satu klik konfirmasi.
+     * Setelah terkonfirmasi, status berubah menjadi `'active'` dan user langsung dapat mengakses akun.
 
 
 7. PEDOMAN OPTIMISASI PERFORMA & LOADING (HIGH SPEED GUIDELINES)
@@ -462,36 +501,41 @@ C. PENGALAMAN MOBILE KHUSUS (MOBILE-PRESET PLUGIN)
 1. Blade Component Optimization (Livewire Blaze):
    - Pasang package `livewire/blaze` via Composer:
      `composer require livewire/blaze`
-   - Aktifkan optimasi direktori Blade di `AppServiceProvider`:
-     `Blaze::optimize()`
-   - Kompilasi static folding dan memoization ini mengeliminasi runtime overhead
-     komponen Blade, menghasilkan render halaman 10-100ms+ lebih cepat per request.
+   - Aktifkan optimasi direktori Blade kustom di `AppServiceProvider`:
+     `Blaze::optimize()->in(resource_path('views'));`
+   - Tidak diterapkan pada folder vendor Filament untuk menjaga stabilitas Livewire v4.
 
-2. Profiling & Eliminasi N+1 (Laravel Debugbar):
+2. Polymorphic Optimization:
+   - Terapkan `Relation::enforceMorphMap` di `AppServiceProvider`:
+     `'transaction' => Transaction::class`, `'debt' => Debt::class`.
+   - Menghemat ukuran indeks DB dan mempercepat join polymorphic.
+
+3. Profiling & Eliminasi N+1 (Laravel Debugbar):
    - Pasang package `fruitcake/laravel-debugbar` untuk environment lokal:
      `composer require fruitcake/laravel-debugbar --dev`
    - Memonitor jumlah query SQL, execution time, dan memory footprint di setiap
      halaman panel untuk memastikan 0 N+1 query sebelum kode dirilis ke production.
 
-3. Filament UI & Data Loading:
+4. Filament UI & Data Loading:
    - Gunakan `->deferLoading()` pada semua Table Resource agar halaman terbuka instan
      dan data dimuat secara asynchronously tanpa memblokir first-contentful-paint (FCP).
    - Tetapkan batas paginasi default yang efisien: `->defaultPaginationPageOption(15)`.
    - Hindari pemanggilan relasi N+1 di table column (gunakan `$record->wallet_name`
      dari arsip denormalisasi atau eager loading resmi via `modifyQueryUsing(fn ($q) => $q->with(...))`).
 
-4. Query & Composite Indexing:
+5. Query & Composite Indexing:
    - Manfaatkan indeks komposit `(account_id, happened_at)` pada `transactions`
      agar filter widget dashboard rentang tanggal bulanan/tahunan dieksekusi
      dalam hitungan milidetik tanpa full-table scan.
    - Gunakan agregasi SQL murni (`selectRaw('SUM(...)')`) saat menghitung ringkasan
      total balance dan cashflow daripada memanggil `.sum()` pada koleksi model Eloquent.
 
-5. Mobile & Frontend Assets:
+6. Mobile & Frontend Assets:
    - Plugin `hammadzafar05/filament-mobile-preset` meminimalkan elemen DOM yang berat
      di viewport mobile.
-   - Aktifkan route caching, config caching, dan view caching pada server production:
+   - Aktifkan route caching, config caching, view caching, dan icon caching pada server production:
      `php artisan optimize`
+     `php artisan icons:cache`
    - Pastikan PHP OPcache aktif pada server PHP 8.2+.
 
 
