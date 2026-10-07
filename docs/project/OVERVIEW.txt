@@ -539,7 +539,76 @@ C. PENGALAMAN MOBILE KHUSUS (MOBILE-PRESET PLUGIN)
    - Pastikan PHP OPcache aktif pada server PHP 8.2+.
 
 
-8. REFERENSI & DOKUMENTASI RESMI
+8. ROADMAP MILESTONE IMPLEMENTASI
+--------------------------------------------------------------------------------
+Pengembangan DompetKita dibagi menjadi 6 Milestone berurutan dan terisolasi
+untuk menjamin kestabilan arsitektur, kepatuhan TDD, dan pencegahan regresi:
+
+- Milestone 1: Multi-Tenancy Foundation
+  * Fokus: Fondasi tenant Filament v5, model Account, pivot account_member.
+  * Deliverables:
+    - PHP 8.4 Backed Enums: AccountRole (Owner, Member, Viewer) & MemberStatus
+      (Invited, Active, Left, Revoked) mengimplementasikan HasLabel & HasColor.
+    - Migrasi accounts dan account_member + AccountFactory.
+    - Model Account (slug generator, relasi owner & members) dan User
+      (kontrak HasTenants, HasDefaultTenant, canAccessTenant).
+    - Halaman registrasi tenant Filament v5 RegisterAccount (RegisterTenant).
+    - Konfigurasi AppPanelProvider dengan tenant slug (/app/{slug}).
+    - Pest Feature Tests: Isolasi tenant, penolakan akses lintas tenant, dan redirect.
+
+- Milestone 2: Core Master Data (Wallets & Categories)
+  * Fokus: Pengelolaan rekening kas/dompet dan kategori transaksi beranggaran.
+  * Deliverables:
+    - Migrasi wallets dan categories + factories & seeders.
+    - Seeder Kategori Default Sistem (Biaya Admin Transfer, Transfer Masuk, Transfer Keluar).
+    - Filament v5 Resource: WalletResource & CategoryResource.
+    - Validasi scoped-unique terhadap tenant dan soft-delete.
+    - Pest Tests: CRUD Dompet & Kategori, validasi duplikasi per-tenant.
+
+- Milestone 3: Pure Event Ledger & Financial Engine
+  * Fokus: Inti pencatatan keuangan, integritas mutasi kas riil, dan transfer.
+  * Deliverables:
+    - Migrasi transfers dan transactions + composite index (account_id, happened_at).
+    - Service layer mutasi saldo atomik dengan pessimistic locking (lockForUpdate()).
+    - Logika Reversal otomatis pada update/delete transaksi.
+    - Transfer antar dompet (auto 2 transaksi ledger + 1 transaksi admin fee jika ada).
+    - Perintah Artisan rekonsiliasi saldo: php artisan wallet:reconcile {account_id?}.
+    - Filament v5 Resource: TransactionResource & TransferResource.
+    - Pest Tests: Race condition prevention, transfer fee deduction, running balance accuracy.
+
+- Milestone 4: Budgets & Debts / Loans Engine
+  * Fokus: Manajemen plafon pengeluaran bulanan serta pencatatan hutang/piutang.
+  * Deliverables:
+    - Migrasi budgets, debts, dan debt_payments.
+    - Sinkronisasi instan hutang/piutang ke dompet kas saat pembuatan (initial_transaction_id).
+    - Pembayaran cicilan (debt_payments) memotong pokok dan mutasi kas dompet.
+    - Validasi anti-overlapping budget bulanan.
+    - Filament v5 Resource: BudgetResource & DebtResource.
+    - Pest Tests: Integrasi hutang ke kas, pelunasan bertahap, dan perhitungan progress.
+
+- Milestone 5: Analytics, Dashboard Widgets & Performance Optimization
+  * Fokus: Visualisasi keuangan real-time dan optimasi kecepatan tinggi.
+  * Deliverables:
+    - Dashboard stats overview via single consolidated raw SQL query.
+    - Widget grafik arus kas bulanan & pie chart kategori (Apex Charts).
+    - Widget monitoring plafon anggaran & pengingat jatuh tempo hutang.
+    - Integrasi livewire/blaze untuk view kustom dan Relation::enforceMorphMap.
+    - Audit query 0 N+1 menggunakan Laravel Debugbar.
+    - Konfigurasi filament-mobile-preset (bottom nav, responsive card tables).
+
+- Milestone 6: Member Invitation & Granular Role Authorization
+  * Fokus: Kolaborasi keluarga/tim dan perlindungan hak akses berbasis peran.
+  * Deliverables:
+    - Alur klaim undangan member via token unik (/invitations/{token}).
+    - Notifikasi email undangan member.
+    - Laravel Policies untuk seluruh Filament Resource berdasarkan AccountRole:
+      * owner : Akses penuh.
+      * member: CRUD transaksi & operasional penuh, tanpa izin kelola tenant.
+      * viewer: Read-only, seluruh action form/edit dinonaktifkan.
+    - Pest Tests: Penegakan otorisasi role di seluruh UI Filament.
+
+
+9. REFERENSI & DOKUMENTASI RESMI
 --------------------------------------------------------------------------------
 - Laravel 13 Documentation       : https://laravel.com/framework/docs/13.x
 - Laravel Debugbar               : https://github.com/fruitcake/laravel-debugbar
@@ -550,3 +619,4 @@ C. PENGALAMAN MOBILE KHUSUS (MOBILE-PRESET PLUGIN)
 - Filament Breezy Plugin         : https://filamentphp.com/plugins/jeffgreco-breezy
 - Laravel Boost Documentation    : https://laravel.com/framework/docs/boost
 ================================================================================
+
