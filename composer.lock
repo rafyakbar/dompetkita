@@ -4,34 +4,34 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1dfdf4f5228ccd49533329f38aa5ff3d",
+    "content-hash": "a3453de064a5ca004af9ddb530ba26c9",
     "packages": [
         {
             "name": "akaunting/laravel-money",
-            "version": "5.2.2",
+            "version": "6.0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/akaunting/laravel-money.git",
-                "reference": "d99a9e8e576cac40668d0a5afaf7ea153590aff9"
+                "reference": "e301405d6b9c953c6d09ce3432e95e559a91b48f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/akaunting/laravel-money/zipball/d99a9e8e576cac40668d0a5afaf7ea153590aff9",
-                "reference": "d99a9e8e576cac40668d0a5afaf7ea153590aff9",
+                "url": "https://api.github.com/repos/akaunting/laravel-money/zipball/e301405d6b9c953c6d09ce3432e95e559a91b48f",
+                "reference": "e301405d6b9c953c6d09ce3432e95e559a91b48f",
                 "shasum": ""
             },
             "require": {
-                "illuminate/contracts": "^9.0|^10.0|^11.0",
-                "illuminate/support": "^9.0|^10.0|^11.0",
-                "illuminate/validation": "^9.0|^10.0|^11.0",
-                "illuminate/view": "^9.0|^10.0|^11.0",
-                "php": "^8.0",
+                "illuminate/contracts": "^10.0|^11.0|^12|^13",
+                "illuminate/support": "^10.0|^11.0|^12|^13",
+                "illuminate/validation": "^10.0|^11.0|^12|^13",
+                "illuminate/view": "^10.0|^11.0|^12|^13",
+                "php": "^8.2",
                 "vlucas/phpdotenv": "^5.4.1"
             },
             "require-dev": {
-                "orchestra/testbench": "^7.4|^8.0|^9.0",
-                "phpunit/phpunit": "^9.5|^10.0|^11.0",
-                "vimeo/psalm": "^4.23|^5.1"
+                "orchestra/testbench": "^8.0|^9.1.4|^10|^11",
+                "phpunit/phpunit": "^10.5|^11.5.50|^12.5.8",
+                "vimeo/psalm": "^6.0"
             },
             "type": "library",
             "extra": {
@@ -70,10 +70,9 @@
                 "money"
             ],
             "support": {
-                "issues": "https://github.com/akaunting/laravel-money/issues",
-                "source": "https://github.com/akaunting/laravel-money/tree/5.2.2"
+                "source": "https://github.com/akaunting/laravel-money/tree/6.0.3"
             },
-            "time": "2024-09-25T10:06:11+00:00"
+            "time": "2026-03-24T11:04:40+00:00"
         },
         {
             "name": "anourvalar/eloquent-serialize",
@@ -1563,7 +1562,7 @@
         },
         {
             "name": "filament/actions",
-            "version": "v3.3.55",
+            "version": "v3.3.56",
             "source": {
                 "type": "git",
                 "url": "https://github.com/filamentphp/actions.git",
@@ -1616,7 +1615,7 @@
         },
         {
             "name": "filament/filament",
-            "version": "v3.3.55",
+            "version": "v3.3.56",
             "source": {
                 "type": "git",
                 "url": "https://github.com/filamentphp/panels.git",
@@ -1681,16 +1680,16 @@
         },
         {
             "name": "filament/forms",
-            "version": "v3.3.55",
+            "version": "v3.3.56",
             "source": {
                 "type": "git",
                 "url": "https://github.com/filamentphp/forms.git",
-                "reference": "e99a612ff07892f5a85ea38b8425269aa4fbee12"
+                "reference": "c7773cb4bdde5ac396a527ce58e78aa4b4c8fc04"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/filamentphp/forms/zipball/e99a612ff07892f5a85ea38b8425269aa4fbee12",
-                "reference": "e99a612ff07892f5a85ea38b8425269aa4fbee12",
+                "url": "https://api.github.com/repos/filamentphp/forms/zipball/c7773cb4bdde5ac396a527ce58e78aa4b4c8fc04",
+                "reference": "c7773cb4bdde5ac396a527ce58e78aa4b4c8fc04",
                 "shasum": ""
             },
             "require": {
@@ -1733,11 +1732,11 @@
                 "issues": "https://github.com/filamentphp/filament/issues",
                 "source": "https://github.com/filamentphp/filament"
             },
-            "time": "2026-06-12T16:57:19+00:00"
+            "time": "2026-10-05T12:35:36+00:00"
         },
         {
             "name": "filament/infolists",
-            "version": "v3.3.55",
+            "version": "v3.3.56",
             "source": {
                 "type": "git",
                 "url": "https://github.com/filamentphp/infolists.git",
@@ -1788,7 +1787,7 @@
         },
         {
             "name": "filament/notifications",
-            "version": "v3.3.55",
+            "version": "v3.3.56",
             "source": {
                 "type": "git",
                 "url": "https://github.com/filamentphp/notifications.git",
@@ -1840,7 +1839,7 @@
         },
         {
             "name": "filament/support",
-            "version": "v3.3.55",
+            "version": "v3.3.56",
             "source": {
                 "type": "git",
                 "url": "https://github.com/filamentphp/support.git",
@@ -1899,7 +1898,7 @@
         },
         {
             "name": "filament/tables",
-            "version": "v3.3.55",
+            "version": "v3.3.56",
             "source": {
                 "type": "git",
                 "url": "https://github.com/filamentphp/tables.git",
@@ -1951,7 +1950,7 @@
         },
         {
             "name": "filament/widgets",
-            "version": "v3.3.55",
+            "version": "v3.3.56",
             "source": {
                 "type": "git",
                 "url": "https://github.com/filamentphp/widgets.git",
