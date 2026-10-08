@@ -8,6 +8,7 @@ use App\Enums\AccountRole;
 use App\Enums\MemberStatus;
 use App\Models\Account;
 use App\Models\Country;
+use Database\Seeders\DefaultCategorySeeder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\Tenancy\RegisterTenant;
@@ -52,6 +53,8 @@ class RegisterAccount extends RegisterTenant
             'status' => MemberStatus::Active->value,
             'confirmed_at' => now(),
         ]);
+
+        DefaultCategorySeeder::seedForAccount($account);
 
         return $account;
     }
