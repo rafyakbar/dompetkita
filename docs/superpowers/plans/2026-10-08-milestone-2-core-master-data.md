@@ -52,7 +52,7 @@
   * `App\Enums\CategoryType: string implements HasLabel, HasColor`: case `Income = 'income'`, `Expense = 'expense'`. Label: "Pemasukan", "Pengeluaran". Color: "success", "danger".
   * `App\Enums\CategoryStatus: string implements HasLabel, HasColor`: case `Active = 'active'`, `Inactive = 'inactive'`. Label: "Aktif", "Nonaktif". Color: "success", "gray".
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Buat file `tests/Unit/Enums/CategoryEnumsTest.php`:
 ```php
@@ -86,12 +86,12 @@ test('category statuses have expected values, labels, and colors', function () {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `php artisan test --compact --filter=CategoryEnumsTest`
 Expected: FAIL (Class `App\Enums\CategoryType` not found).
 
-- [ ] **Step 3: Implement `CategoryType` & `CategoryStatus`**
+- [x] **Step 3: Implement `CategoryType` & `CategoryStatus`**
 
 Buat `app/Enums/CategoryType.php`:
 ```php
@@ -162,12 +162,12 @@ enum CategoryStatus: string implements HasColor, HasLabel
 ```
 *(Catatan: pastikan case enum adalah `Active = 'active'` dan `Inactive = 'inactive'`)*
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `php artisan test --compact --filter=CategoryEnumsTest`
 Expected: PASS (2 tests passed, 16 assertions).
 
-- [ ] **Step 5: Format and commit**
+- [x] **Step 5: Format and commit**
 
 ```bash
 vendor/bin/pint --dirty --format agent
@@ -197,7 +197,7 @@ git commit -m "feat(master-data): add CategoryType and CategoryStatus enums with
   * Model `Category`: `account(): BelongsTo`, auto-slug generator, softDeletes, scopes `scopeActive()`, `scopeIncome()`, `scopeExpense()`, casts `type` (`CategoryType`), `status` (`CategoryStatus`), `is_system` (boolean), `order` (integer).
   * Model `Account`: relasi `wallets(): HasMany`, `categories(): HasMany`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Buat file `tests/Feature/MasterData/WalletModelTest.php`:
 ```php
@@ -335,12 +335,12 @@ test('category query scopes filter correctly', function () {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `php artisan test --compact --filter=ModelTest`
 Expected: FAIL (Tables `wallets` and `categories` do not exist).
 
-- [ ] **Step 3: Implement Migrations, Models, Factories, and Account relations**
+- [x] **Step 3: Implement Migrations, Models, Factories, and Account relations**
 
 Buat migrasi `database/migrations/2026_10_08_100000_create_wallets_table.php` (urutan kolom: id, timestamps, softDeletes, lainnya):
 ```php
@@ -636,12 +636,12 @@ Modifikasi `app/Models/Account.php` dengan menambahkan method relasi:
     }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `php artisan test --compact --filter=ModelTest`
 Expected: PASS (Semua test pada `WalletModelTest` dan `CategoryModelTest` berhasil).
 
-- [ ] **Step 5: Format and commit**
+- [x] **Step 5: Format and commit**
 
 ```bash
 vendor/bin/pint --dirty --format agent
@@ -664,7 +664,7 @@ git commit -m "feat(master-data): add migrations, models, factories and relation
   * `DefaultCategorySeeder::seedForAccount(Account $account): void` (idempotent seeder: membuat "Transfer Masuk", "Transfer Keluar", "Biaya Admin Transfer" dengan `is_system = true`).
   * `RegisterAccount::handleRegistration(array $data)` memanggil seeder tersebut secara otomatis saat registrasi akun berhasil.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Buat file `tests/Feature/MasterData/DefaultCategorySeederTest.php`:
 ```php
@@ -734,12 +734,12 @@ test('registering new account automatically seeds default system categories', fu
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `php artisan test --compact --filter=DefaultCategorySeederTest`
 Expected: FAIL (Class `Database\Seeders\DefaultCategorySeeder` not found).
 
-- [ ] **Step 3: Implement `DefaultCategorySeeder` and wire into `RegisterAccount`**
+- [x] **Step 3: Implement `DefaultCategorySeeder` and wire into `RegisterAccount`**
 
 Buat file `database/seeders/DefaultCategorySeeder.php`:
 ```php
@@ -824,12 +824,12 @@ Modifikasi `app/Filament/Pages/Tenancy/RegisterAccount.php` pada method `handleR
         return $account;
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `php artisan test --compact --filter=DefaultCategorySeederTest`
 Expected: PASS (3 tests passed).
 
-- [ ] **Step 5: Format and commit**
+- [x] **Step 5: Format and commit**
 
 ```bash
 vendor/bin/pint --dirty --format agent
@@ -855,7 +855,7 @@ git commit -m "feat(master-data): implement DefaultCategorySeeder and auto-seed 
   * `WalletResource`: slide-over modal create/edit, scoped unique validation on `name`, trash filter (`TrashedFilter`), list columns with formatting.
   * `CategoryResource`: slide-over modal create/edit, scoped unique validation on `name`, badge formatting for type & status, deletion protection for system categories (`is_system = true`).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Buat file `tests/Feature/MasterData/WalletResourceTest.php`:
 ```php
@@ -1018,12 +1018,12 @@ test('cannot delete system category', function () {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `php artisan test --compact --filter=ResourceTest`
 Expected: FAIL (Resource classes not found).
 
-- [ ] **Step 3: Implement `WalletResource` & `CategoryResource` with ListPages and slide-over modals**
+- [x] **Step 3: Implement `WalletResource` & `CategoryResource` with ListPages and slide-over modals**
 
 Buat file `app/Filament/Resources/WalletResource.php`:
 ```php
@@ -1329,12 +1329,12 @@ class ListCategories extends ListRecords
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `php artisan test --compact --filter=ResourceTest`
 Expected: PASS (Semua test pada `WalletResourceTest` dan `CategoryResourceTest` berhasil).
 
-- [ ] **Step 5: Format and commit**
+- [x] **Step 5: Format and commit**
 
 ```bash
 vendor/bin/pint --dirty --format agent
@@ -1353,7 +1353,7 @@ git commit -m "feat(master-data): add Filament v5 WalletResource and CategoryRes
 - Consumes: `App\Models\Account`, `App\Models\User`, `App\Models\Wallet`, `App\Models\Category`.
 - Produces: Comprehensive multi-tenant feature verification proving strict isolation between tenants, allowing duplicate names across distinct tenants, blocking duplicate names within the same tenant, and enabling soft-delete name re-use.
 
-- [ ] **Step 1: Write the multi-tenant isolation tests**
+- [x] **Step 1: Write the multi-tenant isolation tests**
 
 Buat file `tests/Feature/MasterData/MasterDataTenancyIsolationTest.php`:
 ```php
@@ -1466,17 +1466,17 @@ test('soft-deleted wallet name can be re-used within the same tenant', function 
 });
 ```
 
-- [ ] **Step 2: Run test to verify it passes**
+- [x] **Step 2: Run test to verify it passes**
 
 Run: `php artisan test --compact --filter=MasterDataTenancyIsolationTest`
 Expected: PASS (All tests pass).
 
-- [ ] **Step 3: Run the full test suite to guarantee zero regression**
+- [x] **Step 3: Run the full test suite to guarantee zero regression**
 
 Run: `php artisan test --compact`
 Expected: PASS (All test suites pass with 0 failures).
 
-- [ ] **Step 4: Format and commit**
+- [x] **Step 4: Format and commit**
 
 ```bash
 vendor/bin/pint --dirty --format agent
