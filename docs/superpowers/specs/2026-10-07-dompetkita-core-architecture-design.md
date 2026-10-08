@@ -11,7 +11,7 @@
 **DompetKita** adalah aplikasi manajemen keuangan multi-tenant yang dirancang untuk kebutuhan personal, rumah tangga, dan usaha kecil. Dibangun di atas **Laravel 13**, **Filament PHP v5**, dan **Livewire v4**, aplikasi ini memprioritaskan:
 1. **Integritas Saldo & Keuangan Mutlak**: Zero-loss audit trail, pencegahan race condition via pessimistic locking (`lockForUpdate`), dan buku besar (*ledger*) yang bersih.
 2. **Multi-Tenancy Tanpa Kebocoran**: Model tenant `Account` dengan manajemen anggota terintegrasi Filament v5 `HasTenants`.
-3. **Performa Tinggi & Mobile-First**: Pemuatan halaman instan dengan indeks komposit terarah, Blade optimization via `livewire/blaze` pada view kustom, serta preset mobile ramah ibu jari (*thumb-reach*).
+3. **Performa Tinggi & Mobile-First**: Pemuatan halaman instan dengan indeks komposit terarah, query konsolidasi SQL murni, serta preset mobile ramah ibu jari (*thumb-reach*).
 4. **Kompatibilitas DBMS Penuh**: Tanpa DB Enums di tingkat database; seluruh status dan tipe divalidasi menggunakan PHP 8.1+ Backed Enums dan Eloquent `$casts`.
 
 ---
@@ -309,12 +309,14 @@ Setiap Resource (`Transaction`, `Wallet`, `Category`, `Budget`, `Debt`) diprotek
 
 ## 6. Performance & Mobile Guidelines
 
-1. **Blade Optimization (Livewire Blaze)**:
-   - Dibatasi secara terarah hanya pada view kustom:
-     `Blaze::optimize()->in(resource_path('views'));`
-   - Tidak diterapkan pada folder vendor Filament untuk menjaga stabilitas Livewire v4.
-2. **Polymorphic Optimization**:
+1. **Polymorphic Optimization**:
    - Menerapkan `Relation::enforceMorphMap([ 'transaction' => Transaction::class, 'debt' => Debt::class ])` di `AppServiceProvider`.
+2. **Mobile Navigation & SPA Compatibility (`hammadzafar05/mobile-bottom-nav`)**:
+   - **Keputusan Arsitektur**: Menggunakan plugin mandiri `hammadzafar05/mobile-bottom-nav` dan secara tegas **TIDAK MENGGUNAKAN** `hammadzafar05/filament-mobile-preset`.
+   - **Rasional Teknis**:
+     * Package `filament-mobile-preset` menginjeksi tag `<style data-navigate-track>` pada render hook `PanelsRenderHook::HEAD_END` dan `BODY_END`. Dalam arsitektur Livewire, `data-navigate-track` hanya valid untuk file eksternal dengan URL (`<link href>` / `<script src>`). Pada inline `<style>`, `el.href` bernilai `undefined`, memicu kegagalan internal asset tracker Livewire saat berpindah halaman.
+     * Kegagalan tersebut membekukan lifecycle navigasi Livewire SPA (`wire:navigate`), sehingga event `livewire:navigated` tidak pernah ter-trigger, Alpine.js gagal me-rehydrate body baru (mengakibatkan container utama `.fi-main-ctn` terkunci pada status default `@apply opacity-0`), dark mode hilang, dan progress bar macet di ~30%.
+     * Sebaliknya, plugin `hammadzafar05/mobile-bottom-nav` bekerja secara bersih dan terisolasi untuk merender bottom navigation bar responsif (< 1024px) yang mengekstrak item dari Filament Navigation Registry, 100% kompatibel dan mulus berdampingan dengan `Filament Breezy` dan Filament SPA Mode (`->spa()`).
 3. **Dashboard Query Consolidation**:
    - Menggunakan query tunggal terkonsolidasi dengan agregasi SQL murni (`selectRaw`) yang memanfaatkan indeks komposit `(account_id, happened_at)`:
      ```sql

@@ -11,9 +11,8 @@ Tujuan        : Aplikasi manajemen dan pencatatan keuangan modern multi-akun
                 integritas saldo mutlak, dan pengalaman mobile yang mulus.
 Tech Stack    : - Framework      : Laravel 13.x (PHP 8.2+)
                 - UI Engine      : Filament PHP v5.x (Livewire v4)
-                - Blade Optimizer: livewire/blaze (https://blazephp.dev/)
                 - Tenancy        : Filament Multi-Tenancy (Tenant Model: Account)
-                - Mobile UI      : hammadzafar05/filament-mobile-preset
+                - Mobile UI      : hammadzafar05/mobile-bottom-nav
                 - Auth & 2FA     : Filament Breezy Plugin
                 - AI Assistant   : Laravel Boost (https://laravel.com/framework/docs/boost)
                 - Profiling/Dev  : fruitcake/laravel-debugbar (https://github.com/fruitcake/laravel-debugbar)
@@ -48,9 +47,6 @@ Tech Stack    : - Framework      : Laravel 13.x (PHP 8.2+)
    - Disediakan rutin rekonsiliasi bawaan (`php artisan wallet:reconcile`) sebagai mekanisme *self-healing*.
 
 5. Performance-First & Fast Loading (Kecepatan Maksimal):
-   - Blade Compilation Optimization (Livewire Blaze):
-     Menggunakan `livewire/blaze` terarah khusus untuk views kustom aplikasi:
-     `Blaze::optimize()->in(resource_path('views'))` guna memangkas overhead komponen Blade kustom.
    - Database Indexing Optimal: Seluruh foreign key dan kolom pencarian/sorting
      (`account_id`, `happened_at`, `status`, `slug`, `order`) diberi indeks.
    - Composite Indexing untuk Tenancy: Menambahkan indeks gabungan seperti
@@ -67,11 +63,19 @@ Tech Stack    : - Framework      : Laravel 13.x (PHP 8.2+)
      menghindari query N+1, dan membatasi ukuran paginasi default (15-20 data per halaman).
 
 6. Mobile-First Experience (Optimal di Ponsel):
-   - Memanfaatkan plugin `hammadzafar05/filament-mobile-preset` yang menyediakan:
-     * Bottom Navigation Bar untuk navigasi cepat yang mudah dijangkau ibu jari (*thumb-reach*).
-     * Stacked Tables: Baris tabel bertransformasi rapi menjadi kartu di layar < 640px
-       tanpa perlu scroll horizontal.
+   - Memanfaatkan plugin `hammadzafar05/mobile-bottom-nav` yang menyediakan:
+     * Bottom Navigation Bar responsif di perangkat mobile (< 1024px) untuk navigasi
+       cepat yang mudah dijangkau ibu jari (*thumb-reach*).
+     * Terintegrasi langsung dengan registry navigasi Filament, active state indicators,
+       badge notifikasi, serta dukungan penuh tema dark mode.
      * Slide-over modal sebagai standar penginputan data agar alur pengguna tetap fokus.
+   - Catatan Arsitektur: Package `hammadzafar05/filament-mobile-preset` TIDAK digunakan
+     karena memiliki inkompatibilitas fundamental dengan Livewire SPA Mode (`->spa()`).
+     Preset tersebut menginjeksi tag `<style data-navigate-track>` pada render hook
+     `HEAD_END` dan override layout yang membekukan lifecycle navigasi Livewire
+     (progress bar macet, re-hydration Alpine terhenti, dark mode hilang, dan konten blank).
+     Penggunaan `hammadzafar05/mobile-bottom-nav` secara mandiri terbukti 100% stabil,
+     ringan, dan mulus saat navigasi SPA aktif.
 
 7. AI-Assisted Architecture & Standards (Laravel Boost):
    - Terintegrasi dengan Laravel Boost (`https://laravel.com/framework/docs/boost`)
@@ -459,19 +463,17 @@ B. MENU SIDEBAR (DESKTOP) & BOTTOM NAV (MOBILE)
      * Tanggal Bayar.
      * Catatan & Upload Bukti Pembayaran.
 
-C. PENGALAMAN MOBILE KHUSUS (MOBILE-PRESET PLUGIN)
+C. PENGALAMAN MOBILE KHUSUS (MOBILE-BOTTOM-NAV PLUGIN)
 --------------------------------------------------------------------------------
 1. Bottom Navigation Bar:
-   - Bar navigasi bawah layar ponsel dengan 5 menu cepat:
-     [ Dasbor ]  [ Dompet ]  [ ( + ) Tambah ]  [ Transaksi ]  [ Menu Lain ]
-   - Tombol tengah `( + ) Tambah` memunculkan aksi instan: Catat Pengeluaran,
-     Catat Pemasukan, atau Transfer Dompet.
-2. Stacked Table View:
-   - Pada layar smartphone (< 640px), seluruh tabel otomatis bertransformasi
-     menjadi kartu vertikal tanpa scroll horizontal.
-3. Thumb-Reach Actions:
-   - Tombol konfirmasi, simpan, dan aksi utama diletakkan di bagian bawah layar
-     agar mudah dijangkau satu tangan (ibu jari).
+   - Bar navigasi bawah layar ponsel responsif (< 1024px) yang mengekstrak menu
+     secara otomatis dari Filament Navigation Registry:
+     [ Dasbor ]  [ Dompet & Rekening ]  [ Kategori ]  [ ... Lainnya ]
+   - Tombol `Lainnya` otomatis membuka sidebar Filament dengan mulus.
+   - Terintegrasi penuh dengan active state, counter badge, dan styling dark mode.
+2. Responsive Slide-Over Modals:
+   - Seluruh form create/edit menggunakan modal slide-over yang nyaman dan terfokus
+     pada layar smartphone tanpa perlu berpindah halaman secara penuh.
 
 
 6. ATURAN BISNIS & ALUR FINANSIAL (CORE RULES)
@@ -530,41 +532,34 @@ C. PENGALAMAN MOBILE KHUSUS (MOBILE-PRESET PLUGIN)
 
 7. PEDOMAN OPTIMISASI PERFORMA & LOADING (HIGH SPEED GUIDELINES)
 --------------------------------------------------------------------------------
-1. Blade Component Optimization (Livewire Blaze):
-   - Pasang package `livewire/blaze` via Composer:
-     `composer require livewire/blaze`
-   - Aktifkan optimasi direktori Blade kustom di `AppServiceProvider`:
-     `Blaze::optimize()->in(resource_path('views'));`
-   - Tidak diterapkan pada folder vendor Filament untuk menjaga stabilitas Livewire v4.
-
-2. Polymorphic Optimization:
+1. Polymorphic Optimization:
    - Terapkan `Relation::enforceMorphMap` di `AppServiceProvider`:
      `'transaction' => Transaction::class`, `'debt' => Debt::class`.
    - Menghemat ukuran indeks DB dan mempercepat join polymorphic.
 
-3. Profiling & Eliminasi N+1 (Laravel Debugbar):
+2. Profiling & Eliminasi N+1 (Laravel Debugbar):
    - Pasang package `fruitcake/laravel-debugbar` untuk environment lokal:
      `composer require fruitcake/laravel-debugbar --dev`
    - Memonitor jumlah query SQL, execution time, dan memory footprint di setiap
      halaman panel untuk memastikan 0 N+1 query sebelum kode dirilis ke production.
 
-4. Filament UI & Data Loading:
+3. Filament UI & Data Loading:
    - Gunakan `->deferLoading()` pada semua Table Resource agar halaman terbuka instan
      dan data dimuat secara asynchronously tanpa memblokir first-contentful-paint (FCP).
    - Tetapkan batas paginasi default yang efisien: `->defaultPaginationPageOption(15)`.
    - Hindari pemanggilan relasi N+1 di table column (gunakan `$record->wallet_name`
      dari arsip denormalisasi atau eager loading resmi via `modifyQueryUsing(fn ($q) => $q->with(...))`).
 
-5. Query & Composite Indexing:
+4. Query & Composite Indexing:
    - Manfaatkan indeks komposit `(account_id, happened_at)` pada `transactions`
      agar filter widget dashboard rentang tanggal bulanan/tahunan dieksekusi
      dalam hitungan milidetik tanpa full-table scan.
    - Gunakan agregasi SQL murni (`selectRaw('SUM(...)')`) saat menghitung ringkasan
      total balance dan cashflow daripada memanggil `.sum()` pada koleksi model Eloquent.
 
-6. Mobile & Frontend Assets:
-   - Plugin `hammadzafar05/filament-mobile-preset` meminimalkan elemen DOM yang berat
-     di viewport mobile.
+5. Mobile & Frontend Assets:
+   - Plugin `hammadzafar05/mobile-bottom-nav` mengoptimalkan navigasi mobile dengan
+     konsumsi resource minimal dan kompatibilitas penuh dengan Filament SPA mode.
    - Aktifkan route caching, config caching, view caching, dan icon caching pada server production:
      `php artisan optimize`
      `php artisan icons:cache`
@@ -624,9 +619,9 @@ untuk menjamin kestabilan arsitektur, kepatuhan TDD, dan pencegahan regresi:
     - Dashboard stats overview via single consolidated raw SQL query.
     - Widget grafik arus kas bulanan & pie chart kategori (Apex Charts).
     - Widget monitoring plafon anggaran & pengingat jatuh tempo hutang.
-    - Integrasi livewire/blaze untuk view kustom dan Relation::enforceMorphMap.
+    - Integrasi Relation::enforceMorphMap dan optimasi query.
     - Audit query 0 N+1 menggunakan Laravel Debugbar.
-    - Konfigurasi filament-mobile-preset (bottom nav, responsive card tables).
+    - Konfigurasi mobile-bottom-nav (responsive mobile bottom navigation bar).
 
 - Milestone 6: Member Invitation & Granular Role Authorization
   * Fokus: Kolaborasi keluarga/tim dan perlindungan hak akses berbasis peran.
@@ -682,8 +677,7 @@ Untuk melanjutkan pengembangan proyek dari status saat ini, ikuti alur kerja bak
 - Laravel Debugbar               : https://github.com/fruitcake/laravel-debugbar
 - Filament v5 Overview           : https://filamentphp.com/docs/5.x/introduction/overview
 - Filament v5 Multi-Tenancy      : https://filamentphp.com/docs/5.x/users/tenancy
-- Livewire Blaze (Blade Optimizer): https://github.com/livewire/blaze (https://blazephp.dev/)
-- Filament Mobile Preset         : https://filamentphp.com/plugins/hammadzafar05-mobile-preset
+- Filament Mobile Bottom Nav     : https://filamentphp.com/plugins/hammadzafar05-mobile-bottom-nav
 - Filament Breezy Plugin         : https://filamentphp.com/plugins/jeffgreco-breezy
 - Laravel Boost Documentation    : https://laravel.com/framework/docs/boost
 ================================================================================
