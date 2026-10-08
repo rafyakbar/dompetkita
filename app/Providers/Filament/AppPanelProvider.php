@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Tenancy\RegisterAccount;
+use App\Models\Account;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -32,6 +34,8 @@ class AppPanelProvider extends PanelProvider
             ->login()
             ->registration()
             ->passwordReset()
+            ->tenant(Account::class, slugAttribute: 'slug')
+            ->tenantRegistration(RegisterAccount::class)
             ->sidebarCollapsibleOnDesktop()
             ->colors([
                 'primary' => Color::Amber,
