@@ -12,13 +12,13 @@ return new class extends Migration
     {
         Schema::create('accounts', function (Blueprint $table) {
             $table->id();
+            $table->timestamps();
+            $table->softDeletes();
             $table->foreignId('owner_id')->constrained('users')->cascadeOnDelete();
             $table->string('name')->index();
             $table->string('slug')->unique();
             $table->string('currency_code', 3)->default('IDR');
             $table->text('description')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
         });
     }
 

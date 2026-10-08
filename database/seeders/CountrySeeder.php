@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Models\Country;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 
 class CountrySeeder extends Seeder
@@ -30,12 +30,14 @@ class CountrySeeder extends Seeder
             return;
         }
 
-        $now = now();
         $records = [];
-
         foreach ($countries as $country) {
+            $now = now();
+
             $records[] = [
                 'id' => $country['id'],
+                'created_at' => $now,
+                'updated_at' => $now,
                 'region' => $country['region'] ?? null,
                 'subregion' => $country['subregion'] ?? null,
                 'name' => $country['name'],
@@ -50,22 +52,9 @@ class CountrySeeder extends Seeder
                 'nationality' => $country['nationality'] ?? null,
                 'latitude' => $country['latitude'] ?? null,
                 'longitude' => $country['longitude'] ?? null,
-                'created_at' => $now,
-                'updated_at' => $now,
             ];
         }
 
-        foreach (array_chunk($records, 50) as $chunk) {
-            Country::upsert(
-                $chunk,
-                ['id'],
-                [
-                    'region', 'subregion', 'name', 'iso2', 'iso3',
-                    'numeric_code', 'phonecode', 'capital', 'currency',
-                    'currency_name', 'currency_symbol', 'nationality',
-                    'latitude', 'longitude', 'updated_at',
-                ]
-            );
-        }
+        DB::table('countries')->insert($records);
     }
 }

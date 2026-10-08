@@ -10,13 +10,13 @@ return new class extends Migration
     {
         Schema::create('passkeys', function (Blueprint $table) {
             $table->id();
+            $table->timestamps();
+            $table->timestamp('last_used_at')->nullable();
             $table->morphs('authenticatable');
             $table->string('panel_id')->nullable();
             $table->text('name');
             $table->text('credential_id');
             $table->json('data');
-            $table->timestamp('last_used_at')->nullable();
-            $table->timestamps();
         });
     }
 

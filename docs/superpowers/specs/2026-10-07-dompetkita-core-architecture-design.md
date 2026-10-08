@@ -42,6 +42,13 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
    - Tabel pivot `account_member` menjadi satu-satunya sumber relasi keanggotaan.
    - Saat user membuat akun, user tersebut otomatis didaftarkan ke `account_member` dengan role `'owner'` dan status `'active'`.
    - Relasi `HasTenants` pada model `User` secara ketat hanya mengambil tenant dengan `status = 'active'`.
+7. **Konvensi Urutan Kolom Migrasi Database (Column Ordering Standard)**:
+   - Setiap definisi tabel pada migrasi (`Schema::create`) wajib mengikuti urutan baku:
+     1. `id` (primary key)
+     2. `timestamps` (`created_at`, `updated_at`)
+     3. `softDeletes` (`deleted_at`, jika ada)
+     4. Kolom Waktu / Temporal (misal: `happened_at`, `invited_at`, `due_date`, dll.)
+     5. Kolom lainnya (Foreign keys, attribute strings, numeric, notes, booleans, dll.)
 
 ---
 
@@ -51,43 +58,44 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 
 #### `users` (Bawaan Laravel + Breezy)
 - `id` : unsignedBigInteger, primary key
+- `created_at`, `updated_at` : timestamps
+- `email_verified_at` : timestamp, nullable
 - `name` : string(255)
 - `email` : string(255), unique
-- `email_verified_at` : timestamp, nullable
 - `password` : string(255)
 - `two_factor_secret` : text, nullable
 - `two_factor_recovery` : text, nullable
 - `avatar_url` : string(500), nullable
 - `remember_token` : string(100), nullable
-- `created_at`, `updated_at` : timestamps
 
 #### `accounts` (Tenant / Akun Pembukuan)
 - `id` : unsignedBigInteger, primary key
+- `created_at`, `updated_at` : timestamps
+- `deleted_at` : timestamp, nullable (soft deletes)
 - `owner_id` : foreignId -> `users.id` (cascade on delete)
 - `name` : string(255), index
 - `slug` : string(255), unique (route tenant key)
 - `currency_code` : string(3), default('IDR')
 - `description` : text, nullable
-- `created_at`, `updated_at` : timestamps
-- `deleted_at` : timestamp, nullable (soft deletes)
 
 #### `account_member` (Pivot Keanggotaan & Undangan Tenant)
 - `id` : unsignedBigInteger, primary key
+- `created_at`, `updated_at` : timestamps
+- `invited_at` : timestamp, nullable
+- `confirmed_at` : timestamp, nullable
+- `left_at` : timestamp, nullable
+- `revoked_at` : timestamp, nullable
 - `account_id` : foreignId -> `accounts.id` (cascade on delete)
 - `user_id` : foreignId -> `users.id`, nullable (diisi saat user terdaftar/klaim)
 - `email` : string(255), index
 - `invitation_token` : string(64), nullable, unique
 - `role` : string(20), default('member'), index (`owner`, `member`, `viewer`)
 - `status` : string(20), default('invited'), index (`invited`, `active`, `left`, `revoked`)
-- `invited_at` : timestamp, nullable
-- `confirmed_at` : timestamp, nullable
-- `left_at` : timestamp, nullable
-- `revoked_at` : timestamp, nullable
-- `created_at`, `updated_at` : timestamps
 - Unique constraint: `unique(account_id, email)`
  
 #### `countries` (Master Data Negara & Mata Uang)
 - `id` : unsignedBigInteger, primary key
+- `created_at`, `updated_at` : timestamps
 - `name` : string(255), index
 - `iso2` : string(2), unique
 - `iso3` : string(3), unique
@@ -95,14 +103,13 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 - `phonecode` : string(20), nullable
 - `capital` : string(255), nullable
 - `currency` : string(10), index (kode mata uang ISO 4217, misal: 'IDR', 'USD')
-- `currency_name` : string(255) (nama mata uang, misal: 'Indonesian rupiah')
+- `currency_name` : string(255), index (nama mata uang, misal: 'Indonesian rupiah')
 - `currency_symbol` : string(20), nullable (simbol mata uang, misal: 'Rp', '$')
-- `region` : string(255), nullable
-- `subregion` : string(255), nullable
-- `nationality` : string(255), nullable
+- `region` : string(255), nullable, index
+- `subregion` : string(255), nullable, index
+- `nationality` : string(255), nullable, index
 - `latitude` : decimal(10, 8), nullable
 - `longitude` : decimal(11, 8), nullable
-- `created_at`, `updated_at` : timestamps
 
 ---
 
@@ -110,6 +117,8 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 
 #### `wallets` (Dompet / Rekening / Kas)
 - `id` : unsignedBigInteger, primary key
+- `created_at`, `updated_at` : timestamps
+- `deleted_at` : timestamp, nullable
 - `account_id` : foreignId -> `accounts.id` (cascade on delete)
 - `name` : string(255)
 - `slug` : string(255)
@@ -117,13 +126,13 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 - `color` : string(50), nullable
 - `current_balance` : decimal(24, 2), default(0.00)
 - `allow_minus` : boolean, default(false)
-- `created_at`, `updated_at` : timestamps
-- `deleted_at` : timestamp, nullable
 - Indexes: `index(account_id, slug)`, `index(account_id, current_balance)`
 - Validasi Unik: Ditegakkan di level aplikasi via `Rule::unique('wallets', 'name')->where('account_id', $accountId)->whereNull('deleted_at')`
 
 #### `categories` (Kategori Transaksi)
 - `id` : unsignedBigInteger, primary key
+- `created_at`, `updated_at` : timestamps
+- `deleted_at` : timestamp, nullable
 - `account_id` : foreignId -> `accounts.id` (cascade on delete)
 - `name` : string(255)
 - `slug` : string(255)
@@ -133,8 +142,6 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 - `color` : string(50), nullable
 - `order` : unsignedInteger, default(0)
 - `status` : string(20), default('active'), index (`active`, `inactive`)
-- `created_at`, `updated_at` : timestamps
-- `deleted_at` : timestamp, nullable
 - Indexes: `index(account_id, type)`, `index(account_id, slug)`
 - Validasi Unik: Ditegakkan di level aplikasi via `Rule::unique('categories', 'name')->where('account_id', $accountId)->whereNull('deleted_at')`
 
@@ -144,6 +151,8 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 
 #### `transfers` (Header Pemindahan Dana Antar Dompet)
 - `id` : unsignedBigInteger, primary key
+- `created_at`, `updated_at` : timestamps
+- `happened_at` : timestamp, index
 - `account_id` : foreignId -> `accounts.id` (cascade on delete)
 - `from_wallet_id` : foreignId -> `wallets.id` (restrict on delete)
 - `to_wallet_id` : foreignId -> `wallets.id` (restrict on delete)
@@ -152,13 +161,13 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 - `fee_transaction_id` : foreignId -> `transactions.id`, nullable
 - `amount` : decimal(24, 2) (selalu positif)
 - `fee_amount` : decimal(24, 2), default(0.00)
-- `happened_at` : timestamp, index
 - `note` : text, nullable
-- `created_at`, `updated_at` : timestamps
 - Composite Index: `index(account_id, happened_at)`
 
 #### `transactions` (Ledger Mutasi Kas)
 - `id` : unsignedBigInteger, primary key
+- `created_at`, `updated_at` : timestamps
+- `happened_at` : timestamp, index
 - `account_id` : foreignId -> `accounts.id` (cascade on delete)
 - `wallet_id` : foreignId -> `wallets.id` (restrict on delete)
 - `category_id` : foreignId -> `categories.id`, nullable (restrict on delete)
@@ -168,9 +177,7 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 - `amount` : decimal(24, 2), index (nominal mutasi positif)
 - `category_name` : string(255), nullable (arsip denormalisasi)
 - `wallet_name` : string(255) (arsip denormalisasi)
-- `happened_at` : timestamp, index
 - `note` : text, nullable
-- `created_at`, `updated_at` : timestamps
 - Composite Index: `index(account_id, happened_at)`
 - Sort Order Baku: `happened_at DESC, id DESC`
 
@@ -180,6 +187,9 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 
 #### `budgets` (Plafon Pengeluaran Kategori)
 - `id` : unsignedBigInteger, primary key
+- `created_at`, `updated_at` : timestamps
+- `period_start` : timestamp, nullable
+- `period_end` : timestamp, nullable
 - `account_id` : foreignId -> `accounts.id` (cascade on delete)
 - `category_id` : foreignId -> `categories.id` (cascade on delete)
 - `max_amount` : decimal(24, 2)
@@ -187,13 +197,13 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 - `period_type` : string(20) (`monthly`, `custom`)
 - `year` : unsignedSmallInteger, nullable
 - `month` : unsignedTinyInteger, nullable
-- `period_start` : timestamp, nullable
-- `period_end` : timestamp, nullable
-- `created_at`, `updated_at` : timestamps
 - Unique Constraint Bulanan: `unique(category_id, year, month)`
 
 #### `debts` (Pinjaman & Piutang)
 - `id` : unsignedBigInteger, primary key
+- `created_at`, `updated_at` : timestamps
+- `deleted_at` : timestamp, nullable
+- `due_date` : timestamp, nullable, index
 - `account_id` : foreignId -> `accounts.id` (cascade on delete)
 - `wallet_id` : foreignId -> `wallets.id` (restrict on delete)
 - `initial_transaction_id` : foreignId -> `transactions.id`, nullable
@@ -201,19 +211,16 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 - `type` : string(20), index (`payable`, `receivable`)
 - `initial_amount` : decimal(24, 2)
 - `paid_amount` : decimal(24, 2), default(0.00)
-- `due_date` : timestamp, nullable, index
 - `note` : text, nullable
-- `created_at`, `updated_at` : timestamps
-- `deleted_at` : timestamp, nullable
 - Composite Index: `index(account_id, type)`
 
 #### `debt_payments` (Cicilan / Pelunasan Hutang-Piutang)
 - `id` : unsignedBigInteger, primary key
+- `created_at`, `updated_at` : timestamps
+- `paid_at` : timestamp, index
 - `debt_id` : foreignId -> `debts.id` (cascade on delete)
 - `transaction_id` : foreignId -> `transactions.id` (restrict on delete)
 - `amount` : decimal(24, 2)
-- `paid_at` : timestamp, index
-- `created_at`, `updated_at` : timestamps
 
 ---
 
@@ -221,13 +228,13 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 
 #### `attachments` (Berkas Lampiran Polymorphic)
 - `id` : unsignedBigInteger, primary key
+- `created_at`, `updated_at` : timestamps
+- `deleted_at` : timestamp, nullable
 - `attachable_type` : string(100), index (menggunakan `Relation::enforceMorphMap`)
 - `attachable_id` : unsignedBigInteger, index
 - `file_path` : string(500)
 - `mime_type` : string(100)
 - `size` : unsignedBigInteger
-- `created_at`, `updated_at` : timestamps
-- `deleted_at` : timestamp, nullable
 - Composite Index: `index(attachable_type, attachable_id)`
 
 ---

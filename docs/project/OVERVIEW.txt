@@ -78,6 +78,18 @@ Tech Stack    : - Framework      : Laravel 13.x (PHP 8.2+)
      sebagai MCP server resmi untuk memandu AI coding agents dalam memahami skema DB,
      routes, best practices Laravel 13, dan konvensi proyek yang tersimpan di `.ai/rules`.
 
+8. Konvensi Urutan Kolom Migrasi Database (Column Ordering Standard):
+   - Setiap kali membuat atau mendefinisikan tabel baru dalam migrasi (`Schema::create`),
+     urutan penulisan kolom WAJIB mengikuti tata urutan baku berikut:
+     1. id               : Primary key (`$table->id();`)
+     2. timestamps       : Waktu pembuatan & pembaruan sistem (`$table->timestamps();`)
+     3. softDeletes      : Waktu penghapusan lunak (`$table->softDeletes();`, jika tabel mendukung soft delete)
+     4. Waktu / Temporal : Semua kolom yang berhubungan dengan waktu kejadian/transaksi/status
+                           (misal: `happened_at`, `invited_at`, `confirmed_at`, `left_at`, `revoked_at`,
+                           `due_date`, `paid_at`, `period_start`, `period_end`, dll.)
+     5. Lainnya          : Foreign keys, string nama/kode, angka nominal, teks catatan, status, boolean, dll.
+   - Konvensi ini memastikan struktur fisik skema konsisten, rapi, dan seragam di seluruh aplikasi.
+
 
 3. ARSITEKTUR MULTI-TENANCY & HAK AKSES
 --------------------------------------------------------------------------------
@@ -104,30 +116,35 @@ A. CORE & OTENTIKASI
 
 1. users (Bawaan Laravel + Breezy)
    - id                  : id (primary key)
+   - timestamps
+   - email_verified_at   : timestamp (nullable)
    - name                : string
    - email               : string (unique)
-   - email_verified_at   : timestamp (nullable)
    - password            : string
    - two_factor_secret   : text (nullable, Breezy 2FA)
    - two_factor_recovery : text (nullable, Breezy 2FA)
    - avatar_url          : string(500), nullable
    - remember_token      : string (nullable)
-   - timestamps
 
 2. accounts (Tabel Tenant / Pembukuan)
    Deskripsi: Mencatat entitas pembukuan independen.
    - id            : id (primary key)
+   - timestamps
+   - softDeletes
    - owner_id      : foreignId -> users.id (cascade on delete)
    - name          : string, index
    - slug          : string, unique (digunakan sebagai route tenant key)
    - currency_code : string(3), default('IDR') (mata uang pelaporan akun)
    - description   : text, nullable
-   - timestamps
-   - softDeletes
 
 3. account_member (Tabel Pivot & Undangan Member Tenant)
    Deskripsi: Menghubungkan user ke akun beserta status dan hak aksesnya.
    - id               : id (primary key)
+   - timestamps
+   - invited_at       : timestamp, nullable, index
+   - confirmed_at     : timestamp, nullable, index
+   - left_at          : timestamp, nullable, index
+   - revoked_at       : timestamp, nullable, index
    - account_id       : foreignId -> accounts.id (cascade on delete)
    - user_id          : foreignId -> users.id, nullable (diisi saat user sudah terdaftar/klaim)
    - email            : string, index (email tujuan undangan)
@@ -136,16 +153,12 @@ A. CORE & OTENTIKASI
                         (pilihan via PHP Enum: owner, member, viewer)
    - status           : string(20), default('invited'), index
                         (pilihan via PHP Enum: invited, active, left, revoked)
-   - invited_at       : timestamp, nullable, index
-   - confirmed_at     : timestamp, nullable, index
-   - left_at          : timestamp, nullable, index
-   - revoked_at       : timestamp, nullable, index
-   - timestamps
    - Constraint       : unique(account_id, email)
 
 4. countries (Master Data Negara & Mata Uang)
    Deskripsi: Tabel referensi 250 negara dan 154 mata uang unik dunia untuk pilihan mata uang akun pembukuan.
    - id              : id (primary key)
+   - timestamps
    - name            : string, index (contoh: "Indonesia", "United States")
    - iso2            : string(2), unique (contoh: "ID", "US")
    - iso3            : string(3), unique (contoh: "IDN", "USA")
@@ -153,22 +166,23 @@ A. CORE & OTENTIKASI
    - phonecode       : string(20), nullable
    - capital         : string, nullable
    - currency        : string(10), index (kode mata uang ISO 4217, contoh: "IDR", "USD")
-   - currency_name   : string (contoh: "Indonesian rupiah")
+   - currency_name   : string, index (contoh: "Indonesian rupiah")
    - currency_symbol : string(20), nullable (contoh: "Rp", "$")
-   - region          : string, nullable
-   - subregion       : string, nullable
-   - nationality     : string, nullable
+   - region          : string, nullable, index
+   - subregion       : string, nullable, index
+   - nationality     : string, nullable, index
    - latitude        : decimal(10, 8), nullable
    - longitude       : decimal(11, 8), nullable
-   - timestamps
 
 --------------------------------------------------------------------------------
 B. MASTER DATA KEUANGAN
 --------------------------------------------------------------------------------
 
-4. wallets (Dompet / Rekening / Akun Kas)
+5. wallets (Dompet / Rekening / Akun Kas)
    Deskripsi: Tempat penyimpanan saldo uang fisik maupun digital (Bank, E-Wallet, Kas Tunai).
    - id              : id (primary key)
+   - timestamps
+   - softDeletes
    - account_id      : foreignId -> accounts.id (cascade on delete)
    - name            : string, index (contoh: "Bank UOB", "BCA", "Dompet Tunai")
    - slug            : string, index
@@ -177,14 +191,14 @@ B. MASTER DATA KEUANGAN
    - current_balance : decimal(24, 2), default(0.00), index
                        (saldo riil saat ini, dikelola otomatis via DB Transaction + lockForUpdate)
    - allow_minus     : boolean, default(false), index (apakah saldo boleh bernilai minus)
-   - timestamps
-   - softDeletes
    - Indexing        : index(account_id, slug), index(account_id, current_balance)
    - Validasi Unik   : Ditegakkan di level aplikasi via Rule::unique('wallets', 'name')->where('account_id', $accountId)->whereNull('deleted_at')
 
-5. categories (Kategori Pemasukan & Pengeluaran)
+6. categories (Kategori Pemasukan & Pengeluaran)
    Deskripsi: Klasifikasi transaksi keuangan per akun.
    - id         : id (primary key)
+   - timestamps
+   - softDeletes
    - account_id : foreignId -> accounts.id (cascade on delete)
    - name       : string, index (contoh: "Gaji", "Makanan & Minuman", "Listrik")
    - slug       : string, index
@@ -196,8 +210,6 @@ B. MASTER DATA KEUANGAN
    - order      : unsignedInteger, default(0), index (urutan sorting tampilan)
    - status     : string(20), default('active'), index
                   (pilihan via PHP Enum: active, inactive)
-   - timestamps
-   - softDeletes
    - Indexing   : index(account_id, type), index(account_id, slug)
    - Validasi Unik: Ditegakkan di level aplikasi via Rule::unique('categories', 'name')->where('account_id', $accountId)->whereNull('deleted_at')
 
@@ -205,9 +217,11 @@ B. MASTER DATA KEUANGAN
 C. TRANSAKSI & MUTASI
 --------------------------------------------------------------------------------
 
-6. transactions (Buku Besar / Ledger Mutasi Kas)
+7. transactions (Buku Besar / Ledger Mutasi Kas)
    Deskripsi: Buku besar seluruh pergerakan uang masuk dan keluar riil.
    - id            : id (primary key)
+   - timestamps
+   - happened_at   : timestamp, index (waktu transaksi riil terjadi)
    - account_id    : foreignId -> accounts.id (cascade on delete)
    - wallet_id     : foreignId -> wallets.id (restrict on delete)
    - category_id   : foreignId -> categories.id, nullable (restrict on delete)
@@ -218,15 +232,15 @@ C. TRANSAKSI & MUTASI
    - amount        : decimal(24, 2), index (nominal transaksi, selalu positif)
    - category_name : string(255), nullable (arsip denormalisasi untuk kecepatan history)
    - wallet_name   : string(255) (arsip denormalisasi nama dompet)
-   - happened_at   : timestamp, index (waktu transaksi riil terjadi)
    - note          : text, nullable
-   - timestamps
    - Performance Index: index(account_id, happened_at) -> query rentang tanggal instan
    - Sort Order Baku  : happened_at DESC, id DESC
 
-7. transfers (Transfer Antar Dompet)
+8. transfers (Transfer Antar Dompet)
    Deskripsi: Header pemindahan dana antar dompet (Double-Entry Bookkeeping).
    - id                  : id (primary key)
+   - timestamps
+   - happened_at         : timestamp, index
    - account_id          : foreignId -> accounts.id (cascade on delete)
    - from_wallet_id      : foreignId -> wallets.id (restrict on delete)
    - to_wallet_id        : foreignId -> wallets.id (restrict on delete)
@@ -235,18 +249,19 @@ C. TRANSAKSI & MUTASI
    - fee_transaction_id  : foreignId -> transactions.id, nullable
    - amount              : decimal(24, 2), index (nominal dana yang dipindahkan)
    - fee_amount          : decimal(24, 2), default(0.00), index (nominal biaya transfer)
-   - happened_at         : timestamp, index
    - note                : text, nullable
-   - timestamps
    - Performance Index   : index(account_id, happened_at)
 
 --------------------------------------------------------------------------------
 D. ANGGARAN (BUDGETING)
 --------------------------------------------------------------------------------
 
-8. budgets (Batas Pengeluaran Kategori)
+9. budgets (Batas Pengeluaran Kategori)
    Deskripsi: Perencanaan alokasi pengeluaran per kategori per periode.
    - id               : id (primary key)
+   - timestamps
+   - period_start     : timestamp, nullable
+   - period_end       : timestamp, nullable
    - account_id       : foreignId -> accounts.id (cascade on delete)
    - category_id      : foreignId -> categories.id (cascade on delete)
    - max_amount       : decimal(24, 2), index (batas plafon anggaran, tidak boleh minus)
@@ -256,9 +271,6 @@ D. ANGGARAN (BUDGETING)
                         (pilihan via PHP Enum: monthly, custom)
    - year             : unsignedSmallInteger, nullable (untuk periode bulanan)
    - month            : unsignedTinyInteger, nullable (untuk periode bulanan)
-   - period_start     : timestamp, nullable
-   - period_end       : timestamp, nullable
-   - timestamps
    - Constraint       : unique(category_id, year, month)
    - Performance Index: index(account_id, period_start, period_end)
 
@@ -266,49 +278,49 @@ D. ANGGARAN (BUDGETING)
 E. HUTANG & PIUTANG (DEBTS)
 --------------------------------------------------------------------------------
 
-9. debts (Pencatatan Pinjaman & Piutang)
-   Deskripsi: Mencatat pinjaman yang harus dibayar (payable) atau piutang yang harus ditagih (receivable).
-   - id                     : id (primary key)
-   - account_id             : foreignId -> accounts.id (cascade on delete)
-   - wallet_id              : foreignId -> wallets.id (restrict on delete)
-   - initial_transaction_id : foreignId -> transactions.id, nullable
-                              (transaksi otomatis di dompet saat hutang/piutang pertama dibuat)
-   - counterparty_name      : string(255), index (nama orang/lembaga yang berpiutang/berhutang)
-   - type                   : string(20), index
-                              (pilihan via PHP Enum: payable, receivable)
-                              - payable    : Kita berhutang (kewajiban bayar)
-                              - receivable : Orang lain berhutang ke kita (hak tagih)
-   - initial_amount         : decimal(24, 2), index (nominal pokok pinjaman/piutang)
-   - paid_amount            : decimal(24, 2), default(0.00), index (total yang telah dilunasi)
-   - due_date               : timestamp, nullable, index (tenggat waktu jatuh tempo)
-   - note                   : text, nullable
-   - timestamps
-   - softDeletes
-   - Performance Index      : index(account_id, type)
+10. debts (Pencatatan Pinjaman & Piutang)
+    Deskripsi: Mencatat pinjaman yang harus dibayar (payable) atau piutang yang harus ditagih (receivable).
+    - id                     : id (primary key)
+    - timestamps
+    - softDeletes
+    - due_date               : timestamp, nullable, index (tenggat waktu jatuh tempo)
+    - account_id             : foreignId -> accounts.id (cascade on delete)
+    - wallet_id              : foreignId -> wallets.id (restrict on delete)
+    - initial_transaction_id : foreignId -> transactions.id, nullable
+                               (transaksi otomatis di dompet saat hutang/piutang pertama dibuat)
+    - counterparty_name      : string(255), index (nama orang/lembaga yang berpiutang/berhutang)
+    - type                   : string(20), index
+                               (pilihan via PHP Enum: payable, receivable)
+                               - payable    : Kita berhutang (kewajiban bayar)
+                               - receivable : Orang lain berhutang ke kita (hak tagih)
+    - initial_amount         : decimal(24, 2), index (nominal pokok pinjaman/piutang)
+    - paid_amount            : decimal(24, 2), default(0.00), index (total yang telah dilunasi)
+    - note                   : text, nullable
+    - Performance Index      : index(account_id, type)
 
-10. debt_payments (Pembayaran Cicilan / Pelunasan Hutang-Piutang)
+11. debt_payments (Pembayaran Cicilan / Pelunasan Hutang-Piutang)
     Deskripsi: Riwayat pembayaran berkala yang memotong sisa hutang/piutang.
     - id             : id (primary key)
+    - timestamps
+    - paid_at        : timestamp, index
     - debt_id        : foreignId -> debts.id (cascade on delete)
     - transaction_id : foreignId -> transactions.id (restrict on delete)
     - amount         : decimal(24, 2), default(0.00) (nominal yang dibayarkan)
-    - paid_at        : timestamp, index
-    - timestamps
 
 --------------------------------------------------------------------------------
 F. PENDUKUNG (ATTACHMENTS)
 --------------------------------------------------------------------------------
 
-11. attachments (Lampiran File Polymorphic)
+12. attachments (Lampiran File Polymorphic)
     Deskripsi: Menyimpan berkas bukti transfer, nota, struk, atau dokumen terkait.
     - id              : id (primary key)
+    - timestamps
+    - softDeletes
     - attachable_type : string(100), index (menggunakan Relation::enforceMorphMap)
     - attachable_id   : unsignedBigInteger, index
     - file_path       : string(500) (lokasi file di storage)
     - mime_type       : string(100), index
     - size            : unsignedBigInteger, index (ukuran berkas dalam bytes)
-    - timestamps
-    - softDeletes
     - Performance Index: index(attachable_type, attachable_id)
 
 
