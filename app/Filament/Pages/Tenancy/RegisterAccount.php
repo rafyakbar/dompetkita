@@ -7,6 +7,8 @@ namespace App\Filament\Pages\Tenancy;
 use App\Enums\AccountRole;
 use App\Enums\MemberStatus;
 use App\Models\Account;
+use App\Models\Country;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\Tenancy\RegisterTenant;
 use Filament\Schemas\Schema;
@@ -27,11 +29,12 @@ class RegisterAccount extends RegisterTenant
                     ->placeholder('Contoh: Keuangan Pribadi')
                     ->required()
                     ->maxLength(255),
-                TextInput::make('currency_code')
+                Select::make('currency_code')
                     ->label('Mata Uang')
+                    ->options(fn (): array => Country::getCurrencyOptions())
                     ->default('IDR')
-                    ->disabled()
-                    ->dehydrated(),
+                    ->searchable()
+                    ->required(),
             ]);
     }
 

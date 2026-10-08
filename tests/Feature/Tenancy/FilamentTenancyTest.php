@@ -5,6 +5,7 @@ use App\Enums\MemberStatus;
 use App\Filament\Pages\Tenancy\RegisterAccount;
 use App\Models\Account;
 use App\Models\User;
+use Filament\Forms\Components\Select;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 
@@ -45,6 +46,40 @@ test('user can register a new account and is redirected to its dashboard', funct
     expect($user->accounts()->whereKey($account)->exists())->toBeTrue()
         ->and($account->members()->where('user_id', $user->id)->first()->pivot->role)->toBe(AccountRole::Owner->value)
         ->and($account->members()->where('user_id', $user->id)->first()->pivot->status)->toBe(MemberStatus::Active->value);
+});
+
+test('user can register a new account with custom currency selection', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user);
+
+    Livewire::test(RegisterAccount::class)
+        ->fillForm([
+            'name' => 'Global Portfolio',
+            'currency_code' => 'USD',
+        ])
+        ->call('register')
+        ->assertHasNoFormErrors()
+        ->assertRedirect('/app/global-portfolio');
+
+    $account = Account::where('slug', 'global-portfolio')->first();
+
+    expect($account)->not->toBeNull()
+        ->and($account->currency_code)->toBe('USD');
+});
+
+test('tenant registration form includes searchable currency select with country options', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user);
+
+    Livewire::test(RegisterAccount::class)
+        ->assertFormFieldExists('currency_code', function ($field) {
+            return $field instanceof Select
+                && $field->isSearchable()
+                && array_key_exists('IDR', $field->getOptions())
+                && array_key_exists('USD', $field->getOptions());
+        });
 });
 
 test('user can access own tenant dashboard', function () {

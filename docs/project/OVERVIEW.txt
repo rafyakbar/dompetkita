@@ -31,7 +31,8 @@ Tech Stack    : - Framework      : Laravel 13.x (PHP 8.2+)
      dan Eloquent Model Attribute Casting (`$casts`).
 
 2. Single-Currency per Tenant Architecture:
-   - Setiap Akun Pembukuan (`Account`) menetapkan satu mata uang pelaporan (`currency_code`, default IDR).
+   - Setiap Akun Pembukuan (`Account`) menetapkan satu mata uang pelaporan (`currency_code`, default IDR),
+     yang dipilih dari 154 mata uang unik global berbasis tabel master `countries`.
    - Seluruh dompet di bawah akun tersebut menggunakan mata uang yang sama. Pengelolaan aset
      valas dilakukan dengan membuat akun pembukuan terpisah guna menjaga akurasi 100% tanpa selisih kurs.
 
@@ -141,6 +142,25 @@ A. CORE & OTENTIKASI
    - revoked_at       : timestamp, nullable, index
    - timestamps
    - Constraint       : unique(account_id, email)
+
+4. countries (Master Data Negara & Mata Uang)
+   Deskripsi: Tabel referensi 250 negara dan 154 mata uang unik dunia untuk pilihan mata uang akun pembukuan.
+   - id              : id (primary key)
+   - name            : string, index (contoh: "Indonesia", "United States")
+   - iso2            : string(2), unique (contoh: "ID", "US")
+   - iso3            : string(3), unique (contoh: "IDN", "USA")
+   - numeric_code    : string(10), nullable
+   - phonecode       : string(20), nullable
+   - capital         : string, nullable
+   - currency        : string(10), index (kode mata uang ISO 4217, contoh: "IDR", "USD")
+   - currency_name   : string (contoh: "Indonesian rupiah")
+   - currency_symbol : string(20), nullable (contoh: "Rp", "$")
+   - region          : string, nullable
+   - subregion       : string, nullable
+   - nationality     : string, nullable
+   - latitude        : decimal(10, 8), nullable
+   - longitude       : decimal(11, 8), nullable
+   - timestamps
 
 --------------------------------------------------------------------------------
 B. MASTER DATA KEUANGAN

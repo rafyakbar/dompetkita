@@ -21,7 +21,7 @@
 Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati adalah:
 
 1. **Strategi Mata Uang (Single-Currency per Tenant)**:
-   - Setiap `Account` memiliki satu mata uang acuan (`currency_code`, default: `IDR`).
+   - Setiap `Account` memiliki satu mata uang acuan (`currency_code`, default: `IDR`), dipilih saat pembuatan akun dari 154 mata uang unik global berbasis tabel master `countries` (`Country::getCurrencyOptions()`).
    - Seluruh dompet di bawah akun tersebut menggunakan mata uang yang sama. Pengelolaan aset dalam mata uang asing (valas) dilakukan dengan membuat entitas Akun Pembukuan terpisah.
 2. **Buku Besar Mutasi Kas Riil (`Pure Event Ledger`)**:
    - Transaksi murni mencatat pergerakan riil (`amount`, `direction`, `happened_at`). Saldo berjalan (*running balance*) dihitung secara dinamis via SQL Window Function saat laporan rekening koran dibuka.
@@ -85,6 +85,24 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 - `revoked_at` : timestamp, nullable
 - `created_at`, `updated_at` : timestamps
 - Unique constraint: `unique(account_id, email)`
+ 
+#### `countries` (Master Data Negara & Mata Uang)
+- `id` : unsignedBigInteger, primary key
+- `name` : string(255), index
+- `iso2` : string(2), unique
+- `iso3` : string(3), unique
+- `numeric_code` : string(10), nullable
+- `phonecode` : string(20), nullable
+- `capital` : string(255), nullable
+- `currency` : string(10), index (kode mata uang ISO 4217, misal: 'IDR', 'USD')
+- `currency_name` : string(255) (nama mata uang, misal: 'Indonesian rupiah')
+- `currency_symbol` : string(20), nullable (simbol mata uang, misal: 'Rp', '$')
+- `region` : string(255), nullable
+- `subregion` : string(255), nullable
+- `nationality` : string(255), nullable
+- `latitude` : decimal(10, 8), nullable
+- `longitude` : decimal(11, 8), nullable
+- `created_at`, `updated_at` : timestamps
 
 ---
 
@@ -266,6 +284,7 @@ Perintah ini menghitung ulang saldo riil berdasarkan akumulasi seluruh transaksi
 ### 5.1 Filament Multi-Tenancy Integration
 - **Model Tenant**: `App\Models\Account` (route key: `slug`).
 - **Registrasi Akun Baru**: `RegisterAccount` (`Filament\Pages\Tenancy\RegisterTenant`).
+  - Form memuat input nama akun dan select dropdown searchable pilihan mata uang yang bersumber dari master data negara (`Country::getCurrencyOptions()`, default: `IDR`, 154 opsi mata uang unik global).
   - Saat akun dibuat, buat record `account_member` untuk pembuat akun:
     `role = 'owner'`, `status = 'active'`, `confirmed_at = now()`.
   - Otomatis seed kategori sistem default (`Biaya Admin Transfer`, `Transfer Masuk`, `Transfer Keluar`).
