@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Database\Factories\WalletFactory;
+use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -29,6 +30,10 @@ class Wallet extends Model
     protected static function booted(): void
     {
         static::creating(function (Wallet $wallet): void {
+            if (empty($wallet->account_id) && class_exists(Filament::class) && Filament::getTenant()) {
+                $wallet->account_id = Filament::getTenant()->getKey();
+            }
+
             if (empty($wallet->slug)) {
                 $baseSlug = Str::slug($wallet->name);
                 $slug = $baseSlug;

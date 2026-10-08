@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Enums\CategoryStatus;
 use App\Enums\CategoryType;
 use Database\Factories\CategoryFactory;
+use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -34,6 +35,10 @@ class Category extends Model
     protected static function booted(): void
     {
         static::creating(function (Category $category): void {
+            if (empty($category->account_id) && class_exists(Filament::class) && Filament::getTenant()) {
+                $category->account_id = Filament::getTenant()->getKey();
+            }
+
             if (empty($category->slug)) {
                 $baseSlug = Str::slug($category->name);
                 $slug = $baseSlug;
