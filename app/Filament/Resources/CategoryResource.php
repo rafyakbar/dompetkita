@@ -48,6 +48,15 @@ class CategoryResource extends Resource
     {
         return $schema
             ->components([
+                IconPicker::make('icon')
+                    ->label('Icon')
+                    ->columnSpanFull()
+                    ->columns([
+                        'default' => 1,
+                        'lg' => 3,
+                        '2xl' => 5,
+                    ])
+                    ->closeOnSelect(),
                 Radio::make('type')
                     ->label('Tipe Transaksi')
                     ->options(CategoryType::class)
@@ -61,20 +70,8 @@ class CategoryResource extends Resource
                     ->maxLength(255)
                     ->scopedUnique()
                     ->disabled(fn (?Category $record): bool => (bool) ($record?->is_system)),
-                IconPicker::make('icon')
-                    ->label('Icon')
-                    ->columns([
-                        'default' => 1,
-                        'lg' => 3,
-                        '2xl' => 5,
-                    ])
-                    ->closeOnSelect(),
                 ColorPicker::make('color')
                     ->label('Warna'),
-                TextInput::make('order')
-                    ->label('Urutan')
-                    ->numeric()
-                    ->default(0),
                 Select::make('status')
                     ->label('Status')
                     ->options(CategoryStatus::class)
@@ -90,6 +87,8 @@ class CategoryResource extends Resource
             : null;
 
         return $table
+            ->reorderable('order')
+            ->defaultSort('order', 'asc')
             ->columns([
                 GuavaIconColumn::make('icon')
                     ->label('Icon')

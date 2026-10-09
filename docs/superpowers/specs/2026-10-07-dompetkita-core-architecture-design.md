@@ -152,9 +152,9 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 - `slug` : string(255)
 - `type` : string(20), index (`income`, `expense`)
 - `is_system` : boolean, default(false), index
-- `icon` : string(100), nullable (diinput via `guava/filament-icon-picker`)
+- `icon` : string(100), nullable (diinput via `guava/filament-icon-picker`, diletakkan di paling atas form schema dengan `columnSpanFull()`)
 - `color` : string(50), nullable
-- `order` : unsignedInteger, default(0)
+- `order` : unsignedInteger, default(0) (diatur langsung via reorderable drag-and-drop di tabel, tidak ada input di form)
 - `status` : string(20), default('active'), index (`active`, `inactive`)
 - Kategori Sistem Default:
   * `SYSTEM_INITIAL_BALANCE` (Income, order 1, sparkles)
@@ -162,7 +162,8 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
   * `SYSTEM_TRANSFER_OUT` (Expense, order 3, arrow-up-right)
   * `SYSTEM_TRANSFER_FEE` (Expense, order 4, banknotes)
   * Catatan: Kategori sistem disembunyikan dari tabel manajemen kategori (`where is_system = false`).
-- Tampilan Tabel: Kolom `icon` (warna mengikuti `color`), `name`, `status`.
+- Tampilan Tabel: Kolom `icon` (warna mengikuti `color`), `name`, `status`. Mendukung drag-and-drop reordering (`reorderable('order')`, `defaultSort('order', 'asc')`).
+- Form: Modal slide-over (`icon` full-width di posisi teratas, `type`, `name` scopedUnique, `color`, `status`). Input `order` ditiadakan dari form.
 - Indexes: `index(account_id, type)`, `index(account_id, slug)`
 - Validasi Unik: Ditegakkan di level aplikasi via `Rule::unique('categories', 'name')->where('account_id', $accountId)->whereNull('deleted_at')`
 

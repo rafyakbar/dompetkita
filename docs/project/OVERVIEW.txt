@@ -240,9 +240,9 @@ B. MASTER DATA KEUANGAN
    - type       : string(20), index
                   (pilihan via PHP Enum: income, expense)
    - is_system  : boolean, default(false), index (kategori bawaan sistem/template)
-   - icon       : string(100), nullable, index (diinput via guava/filament-icon-picker)
+   - icon       : string(100), nullable, index (diinput via guava/filament-icon-picker, posisi paling atas form dan full-width)
    - color      : string(50), nullable, index
-   - order      : unsignedInteger, default(0), index (urutan sorting tampilan)
+   - order      : unsignedInteger, default(0), index (urutan sorting tampilan, diatur langsung via drag-and-drop reorder di tabel)
    - status     : string(20), default('active'), index
                   (pilihan via PHP Enum: active, inactive)
    - Kategori Sistem Default:
@@ -439,18 +439,19 @@ B. MENU SIDEBAR (DESKTOP) & BOTTOM NAV (MOBILE)
      * Kategori bawaan sistem (`SYSTEM_INITIAL_BALANCE`, `SYSTEM_TRANSFER_IN`,
        `SYSTEM_TRANSFER_OUT`, `SYSTEM_TRANSFER_FEE`) TIDAK ditampilkan di tabel list.
    - Tampilan Tabel:
+     * Reorderable: Pengurutan posisi kategori langsung via drag-and-drop di tabel (`$table->reorderable('order')->defaultSort('order', 'asc')`).
      * Kolom:
        - icon   : Ikon kategori (warna ikon mengikuti nilai kolom `color`).
        - nama   : Nama kategori.
        - status : Status kategori (Badge: Aktif / Nonaktif).
    - Filter: Tipe (Pemasukan/Pengeluaran), Status (Aktif/Nonaktif), Tong Sampah.
    - Form Tambah / Ubah Kategori (Slide-Over Modal):
+     * Icon: Label "Icon" (IconPicker via `guava/filament-icon-picker`, diletakkan paling atas, `columnSpanFull()`).
      * Tipe Transaksi: Radio Pemasukan (Income) atau Pengeluaran (Expense).
      * Nama Kategori: Label "Nama Kategori", validasi scopedUnique per tenant.
-     * Icon: Label "Icon" (IconPicker via `guava/filament-icon-picker`).
      * Warna: Label "Warna" (ColorPicker).
-     * Urutan: Label "Urutan" (Numeric, default 0).
      * Status: Label "Status" (Select Aktif / Nonaktif).
+     * (Catatan: Input "Urutan" ditiadakan dari form karena diatur langsung dari tabel).
 
 4. Transaksi (Transactions & Transfers)
    - Tampilan Tabel Mutasi:
