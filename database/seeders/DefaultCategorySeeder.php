@@ -9,6 +9,7 @@ use App\Enums\CategoryType;
 use App\Models\Account;
 use App\Models\Category;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class DefaultCategorySeeder extends Seeder
 {
@@ -59,6 +60,7 @@ class DefaultCategorySeeder extends Seeder
                     'name' => $cat['name'],
                 ],
                 [
+                    'slug' => Str::slug($cat['name']),
                     'type' => $cat['type'],
                     'is_system' => true,
                     'icon' => $cat['icon'],
