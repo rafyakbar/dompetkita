@@ -661,7 +661,7 @@ git commit -m "feat(master-data): add migrations, models, factories and relation
 **Interfaces:**
 - Consumes: `App\Models\Account`, `App\Models\Category`, `App\Enums\CategoryType`, `App\Enums\CategoryStatus`.
 - Produces:
-  * `DefaultCategorySeeder::seedForAccount(Account $account): void` (idempotent seeder: membuat "Transfer Masuk", "Transfer Keluar", "Biaya Admin Transfer" dengan `is_system = true`).
+  * `DefaultCategorySeeder::seedForAccount(Account $account): void` (idempotent seeder: membuat `SYSTEM_INITIAL_BALANCE`, `SYSTEM_TRANSFER_IN`, `SYSTEM_TRANSFER_OUT`, `SYSTEM_TRANSFER_FEE` dengan `is_system = true`).
   * `RegisterAccount::handleRegistration(array $data)` memanggil seeder tersebut secara otomatis saat registrasi akun berhasil.
 
 - [x] **Step 1: Write the failing test**
@@ -679,28 +679,34 @@ use App\Models\User;
 use Database\Seeders\DefaultCategorySeeder;
 use Livewire\Livewire;
 
-test('seeder creates 3 default system categories for account', function () {
+test('seeder creates 4 default system categories for account', function () {
     $account = Account::factory()->create();
 
     DefaultCategorySeeder::seedForAccount($account);
 
     $categories = Category::where('account_id', $account->id)->get();
 
-    expect($categories)->toHaveCount(3);
+    expect($categories)->toHaveCount(4);
 
-    $transferIn = $categories->firstWhere('name', 'Transfer Masuk');
+    $initialBalance = $categories->firstWhere('name', 'SYSTEM_INITIAL_BALANCE');
+    expect($initialBalance)->not->toBeNull()
+        ->and($initialBalance->type)->toBe(CategoryType::Income)
+        ->and($initialBalance->is_system)->toBeTrue()
+        ->and($initialBalance->status)->toBe(CategoryStatus::Active);
+
+    $transferIn = $categories->firstWhere('name', 'SYSTEM_TRANSFER_IN');
     expect($transferIn)->not->toBeNull()
         ->and($transferIn->type)->toBe(CategoryType::Income)
         ->and($transferIn->is_system)->toBeTrue()
         ->and($transferIn->status)->toBe(CategoryStatus::Active);
 
-    $transferOut = $categories->firstWhere('name', 'Transfer Keluar');
+    $transferOut = $categories->firstWhere('name', 'SYSTEM_TRANSFER_OUT');
     expect($transferOut)->not->toBeNull()
         ->and($transferOut->type)->toBe(CategoryType::Expense)
         ->and($transferOut->is_system)->toBeTrue()
         ->and($transferOut->status)->toBe(CategoryStatus::Active);
 
-    $adminFee = $categories->firstWhere('name', 'Biaya Admin Transfer');
+    $adminFee = $categories->firstWhere('name', 'SYSTEM_TRANSFER_FEE');
     expect($adminFee)->not->toBeNull()
         ->and($adminFee->type)->toBe(CategoryType::Expense)
         ->and($adminFee->is_system)->toBeTrue()
@@ -713,7 +719,7 @@ test('seeder is idempotent and does not create duplicates on multiple runs', fun
     DefaultCategorySeeder::seedForAccount($account);
     DefaultCategorySeeder::seedForAccount($account);
 
-    expect(Category::where('account_id', $account->id)->count())->toBe(3);
+    expect(Category::where('account_id', $account->id)->count())->toBe(4);
 });
 
 test('registering new account automatically seeds default system categories', function () {
@@ -730,7 +736,7 @@ test('registering new account automatically seeds default system categories', fu
 
     $account = Account::where('slug', 'akun-usaha-baru')->firstOrFail();
 
-    expect($account->categories()->where('is_system', true)->count())->toBe(3);
+    expect($account->categories()->where('is_system', true)->count())->toBe(4);
 });
 ```
 
@@ -768,25 +774,32 @@ class DefaultCategorySeeder extends Seeder
     {
         $defaultCategories = [
             [
-                'name' => 'Transfer Masuk',
+                'name' => 'SYSTEM_INITIAL_BALANCE',
                 'type' => CategoryType::Income,
-                'icon' => 'heroicon-o-arrow-down-left',
+                'icon' => 'heroicon-o-sparkles',
                 'color' => 'success',
                 'order' => 1,
             ],
             [
-                'name' => 'Transfer Keluar',
-                'type' => CategoryType::Expense,
-                'icon' => 'heroicon-o-arrow-up-right',
-                'color' => 'danger',
+                'name' => 'SYSTEM_TRANSFER_IN',
+                'type' => CategoryType::Income,
+                'icon' => 'heroicon-o-arrow-down-left',
+                'color' => 'success',
                 'order' => 2,
             ],
             [
-                'name' => 'Biaya Admin Transfer',
+                'name' => 'SYSTEM_TRANSFER_OUT',
+                'type' => CategoryType::Expense,
+                'icon' => 'heroicon-o-arrow-up-right',
+                'color' => 'danger',
+                'order' => 3,
+            ],
+            [
+                'name' => 'SYSTEM_TRANSFER_FEE',
                 'type' => CategoryType::Expense,
                 'icon' => 'heroicon-o-banknotes',
                 'color' => 'warning',
-                'order' => 3,
+                'order' => 4,
             ],
         ];
 
@@ -850,10 +863,10 @@ git commit -m "feat(master-data): implement DefaultCategorySeeder and auto-seed 
 - Test: `tests/Feature/MasterData/CategoryResourceTest.php`
 
 **Interfaces:**
-- Consumes: `App\Models\Wallet`, `App\Models\Category`, `App\Enums\CategoryType`, `App\Enums\CategoryStatus`.
+- Consumes: `App\Models\Wallet`, `App\Models\Category`, `App\Models\Transaction`, `App\Enums\CategoryType`, `App\Enums\CategoryStatus`.
 - Produces:
-  * `WalletResource`: slide-over modal create/edit, scoped unique validation on `name`, trash filter (`TrashedFilter`), list columns with formatting.
-  * `CategoryResource`: slide-over modal create/edit, scoped unique validation on `name`, badge formatting for type & status, deletion protection for system categories (`is_system = true`).
+  * `WalletResource`: slide-over modal create/edit, scoped unique validation on `name`, `IconPicker` guava, Saldo Awal input on create (otomatis mencatat transaksi `SYSTEM_INITIAL_BALANCE`), kolom tabel `icon` (warna mengikuti `color`), `name` (warna mengikuti `color`), `current_balance` (Saldo), `allow_minus` (Minus).
+  * `CategoryResource`: slide-over modal create/edit, scoped unique validation on `name`, `IconPicker` guava, disembunyikan dari kategori sistem (`where is_system = false`), kolom tabel `icon`, `name`, `status`.
 
 - [x] **Step 1: Write the failing tests**
 
@@ -863,6 +876,7 @@ Buat file `tests/Feature/MasterData/WalletResourceTest.php`:
 
 use App\Filament\Resources\WalletResource\Pages\ListWallets;
 use App\Models\Account;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Wallet;
 use Filament\Actions\CreateAction;
@@ -915,6 +929,43 @@ test('can create wallet via slide-over modal with scoped unique validation', fun
         ->assertHasActionErrors(['name']);
 });
 
+test('can create wallet with initial balance and generates SYSTEM_INITIAL_BALANCE transaction', function () {
+    Livewire::test(ListWallets::class)
+        ->callAction(CreateAction::class, data: [
+            'name' => 'BCA Bisnis',
+            'initial_balance' => 500000,
+            'color' => '#10b981',
+            'allow_minus' => true,
+        ])
+        ->assertHasNoActionErrors();
+
+    $wallet = Wallet::where('account_id', $this->account->id)->where('name', 'BCA Bisnis')->firstOrFail();
+
+    expect((float) $wallet->current_balance)->toBe(500000.0);
+
+    $transaction = Transaction::where('wallet_id', $wallet->id)->first();
+    expect($transaction)->not->toBeNull()
+        ->and((float) $transaction->amount)->toBe(500000.0)
+        ->and($transaction->direction)->toBe(1)
+        ->and($transaction->type)->toBe('transaction')
+        ->and($transaction->category_name)->toBe('SYSTEM_INITIAL_BALANCE')
+        ->and($transaction->account_id)->toBe($this->account->id);
+});
+
+test('creating wallet with zero initial balance does not generate transaction', function () {
+    Livewire::test(ListWallets::class)
+        ->callAction(CreateAction::class, data: [
+            'name' => 'Dompet Kosong',
+            'initial_balance' => 0,
+        ])
+        ->assertHasNoActionErrors();
+
+    $wallet = Wallet::where('account_id', $this->account->id)->where('name', 'Dompet Kosong')->firstOrFail();
+
+    expect((float) $wallet->current_balance)->toBe(0.0)
+        ->and(Transaction::where('wallet_id', $wallet->id)->count())->toBe(0);
+});
+
 test('can edit wallet via slide-over modal', function () {
     $wallet = Wallet::factory()->create([
         'account_id' => $this->account->id,
@@ -955,8 +1006,6 @@ use App\Models\Account;
 use App\Models\Category;
 use App\Models\User;
 use Filament\Actions\CreateAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
 
@@ -975,14 +1024,33 @@ beforeEach(function () {
 });
 
 test('category resource list page renders correctly', function () {
-    Category::factory()->create([
+    $category = Category::factory()->create([
         'account_id' => $this->account->id,
         'name' => 'Makanan & Minuman',
+        'is_system' => false,
     ]);
 
     Livewire::test(ListCategories::class)
         ->assertSuccessful()
-        ->assertCanSeeTableRecords(Category::where('account_id', $this->account->id)->get());
+        ->assertCanSeeTableRecords([$category]);
+});
+
+test('system categories are not displayed in category list table', function () {
+    $systemCategory = Category::factory()->create([
+        'account_id' => $this->account->id,
+        'name' => 'SYSTEM_TRANSFER_IN',
+        'is_system' => true,
+    ]);
+
+    $customCategory = Category::factory()->create([
+        'account_id' => $this->account->id,
+        'name' => 'Hiburan',
+        'is_system' => false,
+    ]);
+
+    Livewire::test(ListCategories::class)
+        ->assertCanSeeTableRecords([$customCategory])
+        ->assertCanNotSeeTableRecords([$systemCategory]);
 });
 
 test('can create category with scoped unique validation', function () {
@@ -1004,17 +1072,6 @@ test('can create category with scoped unique validation', function () {
             'type' => CategoryType::Expense->value,
         ])
         ->assertHasActionErrors(['name']);
-});
-
-test('cannot delete system category', function () {
-    $systemCategory = Category::factory()->create([
-        'account_id' => $this->account->id,
-        'name' => 'Transfer Masuk',
-        'is_system' => true,
-    ]);
-
-    Livewire::test(ListCategories::class)
-        ->assertTableActionHidden(DeleteAction::class, $systemCategory);
 });
 ```
 

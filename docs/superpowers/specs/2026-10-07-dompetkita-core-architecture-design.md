@@ -26,15 +26,21 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 2. **Buku Besar Mutasi Kas Riil (`Pure Event Ledger`)**:
    - Transaksi murni mencatat pergerakan riil (`amount`, `direction`, `happened_at`). Saldo berjalan (*running balance*) dihitung secara dinamis via SQL Window Function saat laporan rekening koran dibuka.
    - Desain ini mendukung input transaksi mundur (*backdated*) serta edit/hapus transaksi secara aman tanpa merusak kebenaran data baris-baris historis lainnya.
-3. **Integritas Konkurensi Saldo**:
+3. **Integritas Konkurensi Saldo & Saldo Awal**:
    - Seluruh pembaruan saldo wajib dibungkus dalam `DB::transaction()` dengan pessimistic lock:
      `$wallet = Wallet::where('id', $walletId)->lockForUpdate()->first()`.
-4. **Relasi Transfer Dua Arah**:
+   - Pembuatan dompet dengan Saldo Awal > 0 otomatis mencatat transaksi pemasukan kas riil (`direction = 1`) berlabel kategori sistem `SYSTEM_INITIAL_BALANCE` sehingga integritas buku besar tetap 100% terjaga sejak hari pertama.
+4. **Relasi Transfer Dua Arah & Kategori Sistem Default**:
    - Tabel `transactions` memiliki foreign key nullable `transfer_id` yang merujuk ke tabel `transfers`.
    - Transfer antar dompet menghasilkan 2 row di `transactions` (keluar dan masuk) bertipe `transfer`.
-   - Kategori default sistem otomatis dibuat saat akun dibuat (`SYSTEM_TRANSFER_OUT`, `SYSTEM_TRANSFER_IN`, `SYSTEM_TRANSFER_FEE`).
+   - 4 Kategori default sistem otomatis dibuat saat akun didaftarkan:
+     * `SYSTEM_INITIAL_BALANCE` (Pemasukan, icon `heroicon-o-sparkles`, color `success`, order 1)
+     * `SYSTEM_TRANSFER_IN` (Pemasukan, icon `heroicon-o-arrow-down-left`, color `success`, order 2)
+     * `SYSTEM_TRANSFER_OUT` (Pengeluaran, icon `heroicon-o-arrow-up-right`, color `danger`, order 3)
+     * `SYSTEM_TRANSFER_FEE` (Pengeluaran, icon `heroicon-o-banknotes`, color `warning`, order 4)
+   - Kategori sistem disembunyikan dari tabel manajemen kategori (`where is_system = false`).
    - Widget dan grafik statistik di dashboard menyediakan filter opsional untuk **sertakan atau kecualikan** transaksi transfer dari perhitungan pengeluaran/pemasukan operasional.
-   - Biaya admin transfer (`fee_amount`) selalu memotong dompet asal (`from_wallet_id`) dan dicatat dengan kategori sistem `Biaya Admin Transfer`.
+   - Biaya admin transfer (`fee_amount`) selalu memotong dompet asal (`from_wallet_id`) dan dicatat dengan kategori sistem `SYSTEM_TRANSFER_FEE`.
 5. **Alur Hutang & Piutang**:
    - Pembuatan hutang (*payable*) atau piutang (*receivable*) selalu mewajibkan pemilihan dompet.
    - Saldo dompet penerima langsung bertambah (hutang) atau berkurang (piutang) dengan pembuatan baris transaksi awal (`initial_transaction_id`).
@@ -115,17 +121,19 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 
 ### 3.2 Master Data Keuangan
 
-#### `wallets` (Dompet / Rekening / Kas)
+#### `wallets` (Dompet / Akun Kas)
 - `id` : unsignedBigInteger, primary key
 - `created_at`, `updated_at` : timestamps
 - `deleted_at` : timestamp, nullable
 - `account_id` : foreignId -> `accounts.id` (cascade on delete)
 - `name` : string(255)
 - `slug` : string(255)
-- `icon` : string(100), nullable
-- `color` : string(50), nullable
+- `icon` : string(100), nullable (diinput via `guava/filament-icon-picker`)
+- `color` : string(50), nullable (diinput via ColorPicker)
 - `current_balance` : decimal(24, 2), default(0.00)
 - `allow_minus` : boolean, default(false)
+- Saldo Awal: Diinput saat pembuatan dompet, jika > 0 otomatis mencatat transaksi `SYSTEM_INITIAL_BALANCE`.
+- Tampilan Tabel: Kolom `icon` (warna mengikuti `color`), `name` (warna teks mengikuti `color`), `current_balance` (Saldo), `allow_minus` (Minus).
 - Indexes: `index(account_id, slug)`, `index(account_id, current_balance)`
 - Validasi Unik: Ditegakkan di level aplikasi via `Rule::unique('wallets', 'name')->where('account_id', $accountId)->whereNull('deleted_at')`
 
@@ -138,10 +146,17 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 - `slug` : string(255)
 - `type` : string(20), index (`income`, `expense`)
 - `is_system` : boolean, default(false), index
-- `icon` : string(100), nullable
+- `icon` : string(100), nullable (diinput via `guava/filament-icon-picker`)
 - `color` : string(50), nullable
 - `order` : unsignedInteger, default(0)
 - `status` : string(20), default('active'), index (`active`, `inactive`)
+- Kategori Sistem Default:
+  * `SYSTEM_INITIAL_BALANCE` (Income, order 1, sparkles)
+  * `SYSTEM_TRANSFER_IN` (Income, order 2, arrow-down-left)
+  * `SYSTEM_TRANSFER_OUT` (Expense, order 3, arrow-up-right)
+  * `SYSTEM_TRANSFER_FEE` (Expense, order 4, banknotes)
+  * Catatan: Kategori sistem disembunyikan dari tabel manajemen kategori (`where is_system = false`).
+- Tampilan Tabel: Kolom `icon` (warna mengikuti `color`), `name`, `status`.
 - Indexes: `index(account_id, type)`, `index(account_id, slug)`
 - Validasi Unik: Ditegakkan di level aplikasi via `Rule::unique('categories', 'name')->where('account_id', $accountId)->whereNull('deleted_at')`
 
@@ -167,18 +182,19 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 #### `transactions` (Ledger Mutasi Kas)
 - `id` : unsignedBigInteger, primary key
 - `created_at`, `updated_at` : timestamps
+- `deleted_at` : timestamp, nullable (soft deletes)
 - `happened_at` : timestamp, index
 - `account_id` : foreignId -> `accounts.id` (cascade on delete)
-- `wallet_id` : foreignId -> `wallets.id` (restrict on delete)
-- `category_id` : foreignId -> `categories.id`, nullable (restrict on delete)
-- `transfer_id` : foreignId -> `transfers.id`, nullable (cascade on delete)
-- `type` : string(20), index (`transaction`, `transfer`)
+- `wallet_id` : foreignId -> `wallets.id` (cascade on delete)
+- `category_id` : foreignId -> `categories.id`, nullable (null on delete)
+- `transfer_id` : unsignedBigInteger, nullable, index (fk ke transfers di Milestone 3)
+- `type` : string(20), default('transaction'), index (`transaction`, `transfer`)
 - `direction` : smallInteger, index (`1` = masuk, `-1` = keluar)
 - `amount` : decimal(24, 2), index (nominal mutasi positif)
 - `category_name` : string(255), nullable (arsip denormalisasi)
 - `wallet_name` : string(255) (arsip denormalisasi)
 - `note` : text, nullable
-- Composite Index: `index(account_id, happened_at)`
+- Composite Index: `index(account_id, happened_at)`, `index(wallet_id, happened_at)`
 - Sort Order Baku: `happened_at DESC, id DESC`
 
 ---

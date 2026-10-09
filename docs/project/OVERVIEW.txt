@@ -13,6 +13,7 @@ Tech Stack    : - Framework      : Laravel 13.x (PHP 8.2+)
                 - UI Engine      : Filament PHP v5.x (Livewire v4)
                 - Tenancy        : Filament Multi-Tenancy (Tenant Model: Account)
                 - Mobile UI      : hammadzafar05/mobile-bottom-nav
+                - Icon Picker    : guava/filament-icon-picker
                 - Auth & 2FA     : Filament Breezy Plugin
                 - AI Assistant   : Laravel Boost (https://laravel.com/framework/docs/boost)
                 - Profiling/Dev  : fruitcake/laravel-debugbar (https://github.com/fruitcake/laravel-debugbar)
@@ -182,7 +183,7 @@ A. CORE & OTENTIKASI
 B. MASTER DATA KEUANGAN
 --------------------------------------------------------------------------------
 
-5. wallets (Dompet / Rekening / Akun Kas)
+5. wallets (Dompet / Akun Kas)
    Deskripsi: Tempat penyimpanan saldo uang fisik maupun digital (Bank, E-Wallet, Kas Tunai).
    - id              : id (primary key)
    - timestamps
@@ -190,11 +191,13 @@ B. MASTER DATA KEUANGAN
    - account_id      : foreignId -> accounts.id (cascade on delete)
    - name            : string, index (contoh: "Bank UOB", "BCA", "Dompet Tunai")
    - slug            : string, index
-   - icon            : string(100), nullable
-   - color           : string(50), nullable
+   - icon            : string(100), nullable (diinput via guava/filament-icon-picker)
+   - color           : string(50), nullable (diinput via ColorPicker)
    - current_balance : decimal(24, 2), default(0.00), index
                        (saldo riil saat ini, dikelola otomatis via DB Transaction + lockForUpdate)
    - allow_minus     : boolean, default(false), index (apakah saldo boleh bernilai minus)
+   - Saldo Awal      : Saat dompet dibuat dengan saldo awal > 0, sistem otomatis mencatat
+                       transaksi pemasukan awal dengan kategori sistem SYSTEM_INITIAL_BALANCE.
    - Indexing        : index(account_id, slug), index(account_id, current_balance)
    - Validasi Unik   : Ditegakkan di level aplikasi via Rule::unique('wallets', 'name')->where('account_id', $accountId)->whereNull('deleted_at')
 
@@ -209,11 +212,17 @@ B. MASTER DATA KEUANGAN
    - type       : string(20), index
                   (pilihan via PHP Enum: income, expense)
    - is_system  : boolean, default(false), index (kategori bawaan sistem/template)
-   - icon       : string(100), nullable, index
+   - icon       : string(100), nullable, index (diinput via guava/filament-icon-picker)
    - color      : string(50), nullable, index
    - order      : unsignedInteger, default(0), index (urutan sorting tampilan)
    - status     : string(20), default('active'), index
                   (pilihan via PHP Enum: active, inactive)
+   - Kategori Sistem Default:
+     * SYSTEM_INITIAL_BALANCE (Type: income, Icon: heroicon-o-sparkles, Color: success, Order: 1)
+     * SYSTEM_TRANSFER_IN     (Type: income, Icon: heroicon-o-arrow-down-left, Color: success, Order: 2)
+     * SYSTEM_TRANSFER_OUT    (Type: expense, Icon: heroicon-o-arrow-up-right, Color: danger, Order: 3)
+     * SYSTEM_TRANSFER_FEE    (Type: expense, Icon: heroicon-o-banknotes, Color: warning, Order: 4)
+     * Catatan: Kategori sistem disembunyikan dari tabel manajemen kategori (where is_system = false).
    - Indexing   : index(account_id, type), index(account_id, slug)
    - Validasi Unik: Ditegakkan di level aplikasi via Rule::unique('categories', 'name')->where('account_id', $accountId)->whereNull('deleted_at')
 
@@ -225,19 +234,20 @@ C. TRANSAKSI & MUTASI
    Deskripsi: Buku besar seluruh pergerakan uang masuk dan keluar riil.
    - id            : id (primary key)
    - timestamps
+   - softDeletes
    - happened_at   : timestamp, index (waktu transaksi riil terjadi)
    - account_id    : foreignId -> accounts.id (cascade on delete)
-   - wallet_id     : foreignId -> wallets.id (restrict on delete)
-   - category_id   : foreignId -> categories.id, nullable (restrict on delete)
-   - transfer_id   : foreignId -> transfers.id, nullable (cascade on delete)
-   - type          : string(20), index
+   - wallet_id     : foreignId -> wallets.id (cascade on delete)
+   - category_id   : foreignId -> categories.id, nullable (null on delete)
+   - transfer_id   : unsignedBigInteger, nullable, index (fk ke transfers di Milestone 3)
+   - type          : string(20), default('transaction'), index
                      (pilihan via PHP Enum: transaction, transfer)
    - direction     : smallInteger [1: Pemasukan, -1: Pengeluaran], index
    - amount        : decimal(24, 2), index (nominal transaksi, selalu positif)
    - category_name : string(255), nullable (arsip denormalisasi untuk kecepatan history)
    - wallet_name   : string(255) (arsip denormalisasi nama dompet)
    - note          : text, nullable
-   - Performance Index: index(account_id, happened_at) -> query rentang tanggal instan
+   - Performance Index: index(account_id, happened_at), index(wallet_id, happened_at)
    - Sort Order Baku  : happened_at DESC, id DESC
 
 8. transfers (Transfer Antar Dompet)
@@ -376,33 +386,43 @@ B. MENU SIDEBAR (DESKTOP) & BOTTOM NAV (MOBILE)
      * Menampilkan 5 transaksi mutasi terakhir dengan tombol cepat (shortcut) untuk melihat/mengedit.
 
 2. Dompet (Wallets)
-   - Tampilan Tabel / Kartu:
-     * Menampilkan daftar dompet: Ikon & Warna, Nama Dompet, Mata Uang Akun,
-       Saldo Saat Ini (`current_balance` diformat mata uang tebal), dan status Boleh Minus.
-     * Tab Filter Cepat: Semua Dompet, Kas/Tunai, Bank, Tabungan.
+   - Label Model & Navigasi: "Dompet"
+   - Tampilan Tabel:
+     * Kolom:
+       - icon   : Ikon dompet (warna ikon mengikuti nilai kolom `color`).
+       - nama   : Nama dompet (warna tulisan mengikuti nilai kolom `color`).
+       - saldo  : Saldo saat ini (`current_balance` diformat mata uang akun).
+       - minus  : Ikon boolean boleh saldo negatif (`allow_minus`).
      * Filter Tong Sampah (*TrashedFilter*) untuk melihat dan memulihkan dompet terhapus.
-     * Tombol Aksi: "Rekonsiliasi Saldo" untuk self-healing saldo jika terjadi desinkronisasi.
    - Aksi Tiap Baris:
      * Ubah (Membuka Slide-Over Modal).
      * Hapus (Soft Delete ke tong sampah).
      * Pulihkan / Hapus Permanen (jika berada di filter Tong Sampah).
    - Form Tambah / Ubah Dompet (Slide-Over Modal):
-     * Nama Dompet (contoh: "Bank UOB", "Dompet Tunai").
-     * Saldo Awal (hanya diisi saat pembuatan pertama).
-     * Ikon (IconPicker) & Warna (ColorPicker).
-     * Toggle "Boleh Minus" (`allow_minus`).
+     * Icon (IconPicker via `guava/filament-icon-picker`, label: "Icon").
+     * Nama Dompet (label: "Nama Dompet", validasi scopedUnique per tenant).
+     * Saldo Awal (label: "Saldo Awal", hanya tampil saat create, numeric default 0;
+       jika diisi > 0 otomatis mencatat transaksi `SYSTEM_INITIAL_BALANCE`).
+     * Warna (ColorPicker, label: "Warna").
+     * Bolehkan Saldo Negatif (Toggle, label: "Bolehkan Saldo Negatif").
 
 3. Kategori (Categories)
+   - Kategori Sistem:
+     * Kategori bawaan sistem (`SYSTEM_INITIAL_BALANCE`, `SYSTEM_TRANSFER_IN`,
+       `SYSTEM_TRANSFER_OUT`, `SYSTEM_TRANSFER_FEE`) TIDAK ditampilkan di tabel list.
    - Tampilan Tabel:
-     * Ikon & Warna Kategori, Nama Kategori, Tipe (Badge: Pemasukan / Pengeluaran),
-       Saldo Mutasi Bulan Ini, Status (Badge: Aktif / Nonaktif).
-     * Fitur Reorder (Drag & Drop) untuk mengatur urutan prioritas kategori (`order`).
+     * Kolom:
+       - icon   : Ikon kategori (warna ikon mengikuti nilai kolom `color`).
+       - nama   : Nama kategori.
+       - status : Status kategori (Badge: Aktif / Nonaktif).
    - Filter: Tipe (Pemasukan/Pengeluaran), Status (Aktif/Nonaktif), Tong Sampah.
    - Form Tambah / Ubah Kategori (Slide-Over Modal):
-     * Nama Kategori (contoh: "Gaji", "Makanan & Minuman", "Listrik & Air").
-     * Tipe: Pemasukan (Income) atau Pengeluaran (Expense).
-     * Ikon (IconPicker) & Warna (ColorPicker).
-     * Toggle Status Aktif/Nonaktif.
+     * Tipe Transaksi: Radio Pemasukan (Income) atau Pengeluaran (Expense).
+     * Nama Kategori: Label "Nama Kategori", validasi scopedUnique per tenant.
+     * Icon: Label "Icon" (IconPicker via `guava/filament-icon-picker`).
+     * Warna: Label "Warna" (ColorPicker).
+     * Urutan: Label "Urutan" (Numeric, default 0).
+     * Status: Label "Status" (Select Aktif / Nonaktif).
 
 4. Transaksi (Transactions & Transfers)
    - Tampilan Tabel Mutasi:
