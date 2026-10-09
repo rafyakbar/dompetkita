@@ -22,10 +22,12 @@
             position: relative;
             width: 100%;
         }
+
+        /* Trigger Input Box - Light mode default */
         .dinero-icon-trigger {
             position: relative;
             width: 100%;
-            height: 4rem; /* 64px like !h-16 */
+            height: 4rem; /* 64px like Dinero !h-16 */
             min-height: 4rem;
             border-radius: 0.5rem;
             display: flex;
@@ -36,40 +38,55 @@
             cursor: pointer;
             user-select: none;
             transition: all 0.15s ease-in-out;
-            background-color: #18181b;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            color: #9ca3af;
-        }
-        :not(.dark) .dinero-icon-trigger {
             background-color: #ffffff;
             border: 1px solid #d1d5db;
             color: #6b7280;
         }
         .dinero-icon-trigger:hover {
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-        :not(.dark) .dinero-icon-trigger:hover {
             border-color: #9ca3af;
         }
         .dinero-icon-trigger.is-active,
         .dinero-icon-trigger:focus-within {
-            border: 2px solid #38bdf8 !important;
-            box-shadow: 0 0 0 1px #38bdf8;
+            border: 2px solid #0284c7 !important;
+            box-shadow: 0 0 0 1px #0284c7;
             outline: none;
         }
         .dinero-icon-trigger.is-disabled {
             opacity: 0.6;
             cursor: not-allowed;
+            background-color: #f9fafb;
         }
+
+        /* Trigger Input Box - Dark mode */
+        .dark .dinero-icon-trigger {
+            background-color: #18181b;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #9ca3af;
+        }
+        .dark .dinero-icon-trigger:hover {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        .dark .dinero-icon-trigger.is-active,
+        .dark .dinero-icon-trigger:focus-within {
+            border: 2px solid #38bdf8 !important;
+            box-shadow: 0 0 0 1px #38bdf8;
+        }
+        .dark .dinero-icon-trigger.is-disabled {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Placeholder text */
         .dinero-icon-placeholder {
             font-size: 0.9375rem;
-            color: #9ca3af;
+            color: #6b7280;
             text-align: center;
             font-weight: 400;
         }
-        :not(.dark) .dinero-icon-placeholder {
-            color: #6b7280;
+        .dark .dinero-icon-placeholder {
+            color: #9ca3af;
         }
+
+        /* Selected icon preview inside trigger */
         .dinero-icon-selected-wrap {
             display: flex;
             flex-direction: column;
@@ -84,10 +101,10 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #f3f4f6;
-        }
-        :not(.dark) .dinero-icon-selected-preview {
             color: #111827;
+        }
+        .dark .dinero-icon-selected-preview {
+            color: #f3f4f6;
         }
         .dinero-icon-selected-preview svg {
             width: 100% !important;
@@ -95,7 +112,7 @@
         }
         .dinero-icon-selected-label {
             font-size: 0.75rem;
-            color: #9ca3af;
+            color: #6b7280;
             text-align: center;
             width: 100%;
             white-space: nowrap;
@@ -103,9 +120,11 @@
             text-overflow: ellipsis;
             margin-top: 0.125rem;
         }
-        :not(.dark) .dinero-icon-selected-label {
-            color: #6b7280;
+        .dark .dinero-icon-selected-label {
+            color: #9ca3af;
         }
+
+        /* Chevron and clear buttons */
         .dinero-icon-chevron {
             position: absolute;
             right: 0.875rem;
@@ -131,15 +150,15 @@
             transition: all 0.15s ease;
         }
         .dinero-icon-clear-btn:hover {
-            color: #f3f4f6;
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        :not(.dark) .dinero-icon-clear-btn:hover {
             color: #111827;
             background-color: #f3f4f6;
         }
+        .dark .dinero-icon-clear-btn:hover {
+            color: #f3f4f6;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
 
-        /* Dropdown styles */
+        /* Dropdown styles - Light mode default */
         .dinero-icon-dropdown {
             position: absolute;
             top: calc(100% + 0.375rem);
@@ -148,41 +167,51 @@
             z-index: 50;
             border-radius: 0.75rem;
             padding: 0.75rem;
-            background-color: #18181b;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
-        }
-        :not(.dark) .dinero-icon-dropdown {
             background-color: #ffffff;
             border: 1px solid #e5e7eb;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.12);
         }
+        /* Dropdown styles - Dark mode */
+        .dark .dinero-icon-dropdown {
+            background-color: #18181b;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
+        }
+
+        /* Search input - Light mode default */
         .dinero-icon-search-input {
             width: 100%;
             padding: 0.5rem 0.75rem;
             border-radius: 0.5rem;
             font-size: 0.875rem;
             line-height: 1.25rem;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            background-color: #18181b;
-            color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            background-color: #ffffff;
+            color: #111827;
             outline: none;
             margin-bottom: 0.625rem;
             transition: border-color 0.15s;
         }
-        :not(.dark) .dinero-icon-search-input {
-            border: 1px solid #d1d5db;
-            background-color: #ffffff;
-            color: #111827;
-        }
         .dinero-icon-search-input::placeholder {
-            color: #6b7280;
+            color: #9ca3af;
         }
         .dinero-icon-search-input:focus {
+            border-color: #0284c7;
+        }
+        /* Search input - Dark mode */
+        .dark .dinero-icon-search-input {
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background-color: #18181b;
+            color: #f3f4f6;
+        }
+        .dark .dinero-icon-search-input::placeholder {
+            color: #6b7280;
+        }
+        .dark .dinero-icon-search-input:focus {
             border-color: #38bdf8;
         }
 
-        /* Grid & Cards styles */
+        /* Grid */
         .dinero-icon-grid {
             display: grid;
             grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -206,14 +235,16 @@
                 grid-template-columns: repeat(5, minmax(0, 1fr));
             }
         }
+
+        /* Cards - Light mode default */
         .dinero-icon-card {
             position: relative;
             height: 4.8rem;
             min-height: 4.8rem;
             padding: 0.5rem 0.5rem;
             border-radius: 0.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.22);
-            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid #e5e7eb;
+            background-color: #ffffff;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -222,26 +253,35 @@
             cursor: pointer;
             user-select: none;
             transition: all 0.15s ease-in-out;
-            color: #f3f4f6;
-        }
-        :not(.dark) .dinero-icon-card {
-            border: 1px solid #e5e7eb;
-            background-color: #ffffff;
             color: #111827;
         }
         .dinero-icon-card:hover {
-            border-color: #38bdf8;
-            background-color: rgba(56, 189, 248, 0.08);
-        }
-        :not(.dark) .dinero-icon-card:hover {
             border-color: #0284c7;
             background-color: #f0f9ff;
         }
         .dinero-icon-card.is-selected {
             background-color: #0284c7 !important;
+            border-color: #0284c7 !important;
+            color: #ffffff !important;
+        }
+
+        /* Cards - Dark mode */
+        .dark .dinero-icon-card {
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            background-color: rgba(255, 255, 255, 0.02);
+            color: #f3f4f6;
+        }
+        .dark .dinero-icon-card:hover {
+            border-color: #38bdf8;
+            background-color: rgba(56, 189, 248, 0.08);
+        }
+        .dark .dinero-icon-card.is-selected {
+            background-color: #0284c7 !important;
             border-color: #38bdf8 !important;
             color: #ffffff !important;
         }
+
+        /* Card Icon */
         .dinero-icon-card-icon {
             width: 2.25rem;
             height: 2.25rem;
@@ -255,6 +295,8 @@
             width: 100% !important;
             height: 100% !important;
         }
+
+        /* Card Label */
         .dinero-icon-card-label {
             font-size: 0.6875rem;
             line-height: 0.875rem;
@@ -267,10 +309,10 @@
             color: inherit;
         }
         .dinero-icon-card:not(.is-selected) .dinero-icon-card-label {
-            color: #e5e7eb;
+            color: #4b5563;
         }
-        :not(.dark) .dinero-icon-card:not(.is-selected) .dinero-icon-card-label {
-            color: #374151;
+        .dark .dinero-icon-card:not(.is-selected) .dinero-icon-card-label {
+            color: #e5e7eb;
         }
     </style>
 
