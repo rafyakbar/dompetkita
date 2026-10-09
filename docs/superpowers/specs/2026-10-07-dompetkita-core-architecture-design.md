@@ -55,6 +55,11 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
      3. `softDeletes` (`deleted_at`, jika ada)
      4. Kolom Waktu / Temporal (misal: `happened_at`, `invited_at`, `due_date`, dll.)
      5. Kolom lainnya (Foreign keys, attribute strings, numeric, notes, booleans, dll.)
+8. **Proteksi Akses Tenant & Pencegahan Stale Intended URL (`ValidateTenantAccess`)**:
+   - Mencegah error 404 ketika database di-refresh (`migrate:fresh --seed`) saat browser masih berada di rute tenant lama.
+   - Diposisikan sebelum `AuthenticatesRequests` via `$middleware->prependToPriorityList(...)` di `bootstrap/app.php`.
+   - Mengosongkan session `url.intended` jika merujuk ke tenant yang tidak ada di database, mengalihkan unauthenticated visitor ke `/app/login` secara aman, dan mengalihkan authenticated user ke default tenant atau `/app/new`.
+   - `DatabaseSeeder` otomatis menjalankan `AccountSeeder` untuk menyuntikkan tenant default `keuangan-pribadi` untuk `admin@email.com` beserta dompet default dan 4 kategori sistem.
 
 ---
 

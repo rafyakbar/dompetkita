@@ -111,6 +111,30 @@ Tech Stack    : - Framework      : Laravel 13.x (PHP 8.2+)
     - `member` : Hak operasional penuh (CRUD transaksi, dompet, kategori, anggaran, hutang).
     - `viewer` : Read-only (hanya memantau dashboard, tabel, dan laporan).
 
+- Proteksi Rute Tenant & Intended URL Sanitizer (`ValidateTenantAccess` Middleware):
+  * Masalah yang diatasi:
+    Ketika database di-reset (`php artisan migrate:fresh --seed`) saat pengguna masih membuka
+    halaman rute tenant tertentu (misal: `/app/keuangan-pribadi/categories`), sesi login terputus.
+    Jika tidak dicegah, middleware otentikasi bawaan akan menyimpan URL rute tenant lama yang belum/tidak
+    ada di DB ke dalam session `url.intended`. Setelah login berhasil, pengguna diredirect ke intended URL
+    tersebut dan mengalami `404 Not Found` (karena route model binding `{tenant:slug}` gagal menemukan entitas `Account`).
+  * Solusi Terintegrasi:
+    1. Middleware `ValidateTenantAccess` dipasang pada panel Filament dan diprioritaskan sebelum
+       `AuthenticatesRequests` via `$middleware->prependToPriorityList(...)` di `bootstrap/app.php`.
+    2. Jika pengguna belum login (guest) mengakses rute tenant yang tidak ada di DB:
+       Middleware otomatis membersihkan session `url.intended` dan me-redirect langsung ke `/app/login`.
+       Dengan demikian, setelah login, pengguna tidak dilempar ke intended URL 404, melainkan langsung diarahkan
+       ke default tenant miliknya atau ke `/app/new`.
+    3. Jika pengguna terotentikasi mengakses slug tenant yang tidak ada di DB:
+       Middleware me-redirect pengguna secara aman ke default tenant yang ia miliki (`$user->getDefaultTenant()`),
+       atau ke `/app/new` jika belum memiliki akun sama sekali.
+    4. Sanitasi Otomatis: Setiap request membersihkan session `url.intended` jika merujuk ke slug tenant non-aktif/non-eksisten.
+    5. Exception Handler Fallback: Menangani `ModelNotFoundException` pada `Account` di `bootstrap/app.php`
+       sebagai jaring pengaman tambahan jika binding model gagal di level router.
+    6. Default Seed: `AccountSeeder` diikutsertakan dalam `DatabaseSeeder` sehingga setelah `php artisan migrate:fresh --seed`,
+       akun default `keuangan-pribadi` milik `admin@email.com` otomatis tersedia lengkap dengan 4 kategori sistem
+       dan 1 dompet default ("Dompet Utama").
+
 
 4. SPESIFIKASI SKEMA DATABASE (NO DB ENUMS)
 --------------------------------------------------------------------------------
