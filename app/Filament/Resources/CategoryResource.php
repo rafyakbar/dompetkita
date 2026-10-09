@@ -18,6 +18,7 @@ use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Colors\Color;
 use Filament\Tables\Columns\TextColumn;
@@ -62,13 +63,14 @@ class CategoryResource extends Resource
                     ->options(CategoryType::class)
                     ->default(CategoryType::Expense->value)
                     ->required()
+                    ->live()
                     ->inline()
                     ->disabled(fn (?Category $record): bool => (bool) ($record?->is_system)),
                 TextInput::make('name')
                     ->label('Nama Kategori')
                     ->required()
                     ->maxLength(255)
-                    ->scopedUnique()
+                    ->scopedUnique(modifyQueryUsing: fn (Builder $query, Get $get) => $query->where('type', $get('type')))
                     ->disabled(fn (?Category $record): bool => (bool) ($record?->is_system)),
                 ColorPicker::make('color')
                     ->label('Warna'),

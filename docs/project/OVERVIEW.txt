@@ -132,8 +132,8 @@ Tech Stack    : - Framework      : Laravel 13.x (PHP 8.2+)
     5. Exception Handler Fallback: Menangani `ModelNotFoundException` pada `Account` di `bootstrap/app.php`
        sebagai jaring pengaman tambahan jika binding model gagal di level router.
     6. Default Seed: `AccountSeeder` diikutsertakan dalam `DatabaseSeeder` sehingga setelah `php artisan migrate:fresh --seed`,
-       akun default `keuangan-pribadi` milik `admin@email.com` otomatis tersedia lengkap dengan 4 kategori sistem
-       dan 1 dompet default ("Dompet Utama").
+       akun default `keuangan-pribadi` milik `admin@email.com` otomatis tersedia lengkap dengan 8 kategori sistem,
+       14 kategori pengguna bawaan (4 pemasukan, 10 pengeluaran), dan 1 dompet default ("Dompet Utama").
 
 
 4. SPESIFIKASI SKEMA DATABASE (NO DB ENUMS)
@@ -245,14 +245,21 @@ B. MASTER DATA KEUANGAN
    - order      : unsignedInteger, default(0), index (urutan sorting tampilan, diatur langsung via drag-and-drop reorder di tabel)
    - status     : string(20), default('active'), index
                   (pilihan via PHP Enum: active, inactive)
-   - Kategori Sistem Default:
+   - Kategori Sistem Default (is_system = true):
      * SYSTEM_INITIAL_BALANCE (Type: income, Icon: heroicon-o-sparkles, Color: success, Order: 1)
      * SYSTEM_TRANSFER_IN     (Type: income, Icon: heroicon-o-arrow-down-left, Color: success, Order: 2)
-     * SYSTEM_TRANSFER_OUT    (Type: expense, Icon: heroicon-o-arrow-up-right, Color: danger, Order: 3)
-     * SYSTEM_TRANSFER_FEE    (Type: expense, Icon: heroicon-o-banknotes, Color: warning, Order: 4)
+     * SYSTEM_DEBT_RECEIVED   (Type: income, Icon: heroicon-o-inbox-arrow-down, Color: info, Order: 3)
+     * SYSTEM_DEBT_COLLECTED  (Type: income, Icon: heroicon-o-check-badge, Color: success, Order: 4)
+     * SYSTEM_TRANSFER_OUT    (Type: expense, Icon: heroicon-o-arrow-up-right, Color: danger, Order: 5)
+     * SYSTEM_TRANSFER_FEE    (Type: expense, Icon: heroicon-o-banknotes, Color: warning, Order: 6)
+     * SYSTEM_DEBT_GIVEN      (Type: expense, Icon: heroicon-o-paper-airplane, Color: warning, Order: 7)
+     * SYSTEM_DEBT_REPAYMENT  (Type: expense, Icon: heroicon-o-arrow-path, Color: danger, Order: 8)
      * Catatan: Kategori sistem disembunyikan dari tabel manajemen kategori (where is_system = false).
+   - Kategori Bawaan Pengguna (is_system = false):
+     * Pendapatan: Gaji, Freelance, Investasi, Lainnya
+     * Pengeluaran: Dapur, Belanja, Transportasi, Tagihan & Utilitas, Pendidikan, Kesehatan, Properti, Hiburan, Investasi, Lainnya
    - Indexing   : index(account_id, type), index(account_id, slug)
-   - Validasi Unik: Ditegakkan di level aplikasi via Rule::unique('categories', 'name')->where('account_id', $accountId)->whereNull('deleted_at')
+   - Validasi Unik: Ditegakkan di level aplikasi via Rule::unique('categories', 'name')->where('account_id', $accountId)->where('type', $type)->whereNull('deleted_at')
 
 --------------------------------------------------------------------------------
 C. TRANSAKSI & MUTASI
@@ -436,8 +443,7 @@ B. MENU SIDEBAR (DESKTOP) & BOTTOM NAV (MOBILE)
 
 3. Kategori (Categories)
    - Kategori Sistem:
-     * Kategori bawaan sistem (`SYSTEM_INITIAL_BALANCE`, `SYSTEM_TRANSFER_IN`,
-       `SYSTEM_TRANSFER_OUT`, `SYSTEM_TRANSFER_FEE`) TIDAK ditampilkan di tabel list.
+     * Kategori bawaan sistem (8 kategori sistem: saldo awal, transfer, dan hutang-piutang) TIDAK ditampilkan di tabel list.
    - Tampilan Tabel:
      * Reorderable: Pengurutan posisi kategori langsung via drag-and-drop di tabel (`$table->reorderable('order')->defaultSort('order', 'asc')`).
      * Kolom:
@@ -448,7 +454,7 @@ B. MENU SIDEBAR (DESKTOP) & BOTTOM NAV (MOBILE)
    - Form Tambah / Ubah Kategori (Slide-Over Modal):
      * Icon: Label "Icon" (IconPicker via `guava/filament-icon-picker`, diletakkan paling atas, `columnSpanFull()`).
      * Tipe Transaksi: Radio Pemasukan (Income) atau Pengeluaran (Expense).
-     * Nama Kategori: Label "Nama Kategori", validasi scopedUnique per tenant.
+     * Nama Kategori: Label "Nama Kategori", validasi scopedUnique per tenant dan per tipe transaksi.
      * Warna: Label "Warna" (ColorPicker).
      * Status: Label "Status" (Select Aktif / Nonaktif).
      * (Catatan: Input "Urutan" ditiadakan dari form karena diatur langsung dari tabel).

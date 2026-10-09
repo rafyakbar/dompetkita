@@ -33,12 +33,17 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 4. **Relasi Transfer Dua Arah & Kategori Sistem Default**:
    - Tabel `transactions` memiliki foreign key nullable `transfer_id` yang merujuk ke tabel `transfers`.
    - Transfer antar dompet menghasilkan 2 row di `transactions` (keluar dan masuk) bertipe `transfer`.
-   - 4 Kategori default sistem otomatis dibuat saat akun didaftarkan:
+   - 8 Kategori default sistem otomatis dibuat saat akun didaftarkan:
      * `SYSTEM_INITIAL_BALANCE` (Pemasukan, icon `heroicon-o-sparkles`, color `success`, order 1)
      * `SYSTEM_TRANSFER_IN` (Pemasukan, icon `heroicon-o-arrow-down-left`, color `success`, order 2)
-     * `SYSTEM_TRANSFER_OUT` (Pengeluaran, icon `heroicon-o-arrow-up-right`, color `danger`, order 3)
-     * `SYSTEM_TRANSFER_FEE` (Pengeluaran, icon `heroicon-o-banknotes`, color `warning`, order 4)
+     * `SYSTEM_DEBT_RECEIVED` (Pemasukan, icon `heroicon-o-inbox-arrow-down`, color `info`, order 3)
+     * `SYSTEM_DEBT_COLLECTED` (Pemasukan, icon `heroicon-o-check-badge`, color `success`, order 4)
+     * `SYSTEM_TRANSFER_OUT` (Pengeluaran, icon `heroicon-o-arrow-up-right`, color `danger`, order 5)
+     * `SYSTEM_TRANSFER_FEE` (Pengeluaran, icon `heroicon-o-banknotes`, color `warning`, order 6)
+     * `SYSTEM_DEBT_GIVEN` (Pengeluaran, icon `heroicon-o-paper-airplane`, color `warning`, order 7)
+     * `SYSTEM_DEBT_REPAYMENT` (Pengeluaran, icon `heroicon-o-arrow-path`, color `danger`, order 8)
    - Kategori sistem disembunyikan dari tabel manajemen kategori (`where is_system = false`).
+   - Selain itu, 14 kategori umum bawaan pengguna (4 pemasukan: Gaji, Freelance, Investasi, Lainnya; 10 pengeluaran: Dapur, Belanja, Transportasi, Tagihan & Utilitas, Pendidikan, Kesehatan, Properti, Hiburan, Investasi, Lainnya) juga otomatis dibuatkan dengan `is_system = false` sehingga langsung siap pakai.
    - Widget dan grafik statistik di dashboard menyediakan filter opsional untuk **sertakan atau kecualikan** transaksi transfer dari perhitungan pengeluaran/pemasukan operasional.
    - Biaya admin transfer (`fee_amount`) selalu memotong dompet asal (`from_wallet_id`) dan dicatat dengan kategori sistem `SYSTEM_TRANSFER_FEE`.
 5. **Alur Hutang & Piutang**:
@@ -156,16 +161,23 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 - `color` : string(50), nullable
 - `order` : unsignedInteger, default(0) (diatur langsung via reorderable drag-and-drop di tabel, tidak ada input di form)
 - `status` : string(20), default('active'), index (`active`, `inactive`)
-- Kategori Sistem Default:
+- Kategori Sistem Default (is_system = true):
   * `SYSTEM_INITIAL_BALANCE` (Income, order 1, sparkles)
   * `SYSTEM_TRANSFER_IN` (Income, order 2, arrow-down-left)
-  * `SYSTEM_TRANSFER_OUT` (Expense, order 3, arrow-up-right)
-  * `SYSTEM_TRANSFER_FEE` (Expense, order 4, banknotes)
+  * `SYSTEM_DEBT_RECEIVED` (Income, order 3, inbox-arrow-down)
+  * `SYSTEM_DEBT_COLLECTED` (Income, order 4, check-badge)
+  * `SYSTEM_TRANSFER_OUT` (Expense, order 5, arrow-up-right)
+  * `SYSTEM_TRANSFER_FEE` (Expense, order 6, banknotes)
+  * `SYSTEM_DEBT_GIVEN` (Expense, order 7, paper-airplane)
+  * `SYSTEM_DEBT_REPAYMENT` (Expense, order 8, arrow-path)
   * Catatan: Kategori sistem disembunyikan dari tabel manajemen kategori (`where is_system = false`).
+- Kategori Bawaan Pengguna (is_system = false):
+  * Pendapatan: Gaji, Freelance, Investasi, Lainnya
+  * Pengeluaran: Dapur, Belanja, Transportasi, Tagihan & Utilitas, Pendidikan, Kesehatan, Properti, Hiburan, Investasi, Lainnya
 - Tampilan Tabel: Kolom `icon` (warna mengikuti `color`), `name`, `status`. Mendukung drag-and-drop reordering (`reorderable('order')`, `defaultSort('order', 'asc')`).
-- Form: Modal slide-over (`icon` full-width di posisi teratas, `type`, `name` scopedUnique, `color`, `status`). Input `order` ditiadakan dari form.
+- Form: Modal slide-over (`icon` full-width di posisi teratas, `type`, `name` scopedUnique per tenant & tipe transaksi, `color`, `status`). Input `order` ditiadakan dari form.
 - Indexes: `index(account_id, type)`, `index(account_id, slug)`
-- Validasi Unik: Ditegakkan di level aplikasi via `Rule::unique('categories', 'name')->where('account_id', $accountId)->whereNull('deleted_at')`
+- Validasi Unik: Ditegakkan di level aplikasi via `Rule::unique('categories', 'name')->where('account_id', $accountId)->where('type', $type)->whereNull('deleted_at')`
 
 ---
 

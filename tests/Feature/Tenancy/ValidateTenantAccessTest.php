@@ -59,7 +59,8 @@ test('seeder creates default keuangan-pribadi account with wallet and system cat
     expect($account)->not->toBeNull()
         ->and($account->owner_id)->toBe($admin->id)
         ->and($account->members()->where('user_id', $admin->id)->exists())->toBeTrue()
-        ->and($account->categories()->where('is_system', true)->count())->toBe(4)
+        ->and($account->categories()->where('is_system', true)->count())->toBe(8)
+        ->and($account->categories()->where('is_system', false)->count())->toBe(14)
         ->and($account->wallets()->where('name', 'Dompet Utama')->exists())->toBeTrue();
 });
 

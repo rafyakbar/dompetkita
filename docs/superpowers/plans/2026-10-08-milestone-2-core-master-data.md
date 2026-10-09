@@ -661,7 +661,7 @@ git commit -m "feat(master-data): add migrations, models, factories and relation
 **Interfaces:**
 - Consumes: `App\Models\Account`, `App\Models\Category`, `App\Enums\CategoryType`, `App\Enums\CategoryStatus`.
 - Produces:
-  * `DefaultCategorySeeder::seedForAccount(Account $account): void` (idempotent seeder: membuat `SYSTEM_INITIAL_BALANCE`, `SYSTEM_TRANSFER_IN`, `SYSTEM_TRANSFER_OUT`, `SYSTEM_TRANSFER_FEE` dengan `is_system = true`).
+  * `DefaultCategorySeeder::seedForAccount(Account $account): void` (idempotent seeder: membuat 8 kategori sistem bawaan dengan `is_system = true`, serta 14 kategori umum bawaan pengguna dengan `is_system = false`).
   * `RegisterAccount::handleRegistration(array $data)` memanggil seeder tersebut secara otomatis saat registrasi akun berhasil.
 
 - [x] **Step 1: Write the failing test**

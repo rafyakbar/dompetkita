@@ -68,13 +68,24 @@ test('can create category with scoped unique validation', function () {
 
     expect(Category::where('account_id', $this->account->id)->where('name', 'Transportasi')->exists())->toBeTrue();
 
-    // Duplicate name inside same tenant must fail
+    // Duplicate name inside same tenant and same type must fail
     Livewire::test(ListCategories::class)
         ->callAction(CreateAction::class, data: [
             'name' => 'Transportasi',
             'type' => CategoryType::Expense->value,
         ])
         ->assertHasActionErrors(['name']);
+
+    // Same name with different type should succeed
+    Livewire::test(ListCategories::class)
+        ->callAction(CreateAction::class, data: [
+            'name' => 'Transportasi',
+            'type' => CategoryType::Income->value,
+            'status' => CategoryStatus::Active->value,
+        ])
+        ->assertHasNoActionErrors();
+
+    expect(Category::where('account_id', $this->account->id)->where('name', 'Transportasi')->count())->toBe(2);
 });
 
 test('category form icon field is at the top with full width column span and does not have order input', function () {
