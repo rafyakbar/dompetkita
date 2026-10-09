@@ -11,6 +11,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -94,7 +95,20 @@ class WalletResource extends Resource
                     ->color($resolveColor),
                 TextColumn::make('current_balance')
                     ->label('Saldo')
-                    ->money(fn ($record): string => $record->account->currency_code ?? 'IDR')
+                    ->money(
+                        currency: fn (?Wallet $record): string => $record?->account?->currency_code ?? Filament::getTenant()?->currency_code ?? 'IDR',
+                        locale: fn (?Wallet $record): string => match (strtoupper($record?->account?->currency_code ?? Filament::getTenant()?->currency_code ?? 'IDR')) {
+                            'IDR' => 'id',
+                            'USD' => 'en',
+                            'EUR' => 'de',
+                            'GBP' => 'en_GB',
+                            'JPY' => 'ja',
+                            'SGD' => 'en_SG',
+                            'MYR' => 'ms',
+                            default => 'id',
+                        },
+                        decimalPlaces: fn ($state, ?Wallet $record): int => strtoupper($record?->account?->currency_code ?? Filament::getTenant()?->currency_code ?? 'IDR') === 'IDR' && (float) $state == (int) (float) $state ? 0 : 2,
+                    )
                     ->sortable(),
                 IconColumn::make('allow_minus')
                     ->label('Minus')

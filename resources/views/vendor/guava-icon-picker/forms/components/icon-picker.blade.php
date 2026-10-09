@@ -27,14 +27,14 @@
         .dinero-icon-trigger {
             position: relative;
             width: 100%;
-            height: 4rem; /* 64px like Dinero !h-16 */
-            min-height: 4rem;
+            height: 5.75rem;
+            min-height: 5.75rem;
             border-radius: 0.5rem;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 0.5rem 2.5rem 0.5rem 1rem;
+            padding: 0.75rem 2.75rem 0.75rem 1rem;
             cursor: pointer;
             user-select: none;
             transition: all 0.15s ease-in-out;
@@ -96,8 +96,8 @@
             height: 100%;
         }
         .dinero-icon-selected-preview {
-            width: 2.25rem;
-            height: 2.25rem;
+            width: 2.75rem;
+            height: 2.75rem;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -111,14 +111,15 @@
             height: 100% !important;
         }
         .dinero-icon-selected-label {
-            font-size: 0.75rem;
+            font-size: 0.8125rem;
+            line-height: 1.125rem;
             color: #6b7280;
             text-align: center;
             width: 100%;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            margin-top: 0.125rem;
+            margin-top: 0.375rem;
         }
         .dark .dinero-icon-selected-label {
             color: #9ca3af;
@@ -127,7 +128,7 @@
         /* Chevron and clear buttons */
         .dinero-icon-chevron {
             position: absolute;
-            right: 0.875rem;
+            right: 1rem;
             top: 50%;
             transform: translateY(-50%);
             width: 1.25rem;
@@ -137,10 +138,10 @@
         }
         .dinero-icon-clear-btn {
             position: absolute;
-            right: 2.375rem;
+            right: 2.75rem;
             top: 50%;
             transform: translateY(-50%);
-            padding: 0.25rem;
+            padding: 0.375rem;
             border-radius: 0.375rem;
             color: #9ca3af;
             cursor: pointer;

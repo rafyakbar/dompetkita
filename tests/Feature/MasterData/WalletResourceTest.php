@@ -137,3 +137,16 @@ test('wallet form icon field has full width column span and responsive columns',
             '2xl' => 5,
         ]);
 });
+
+test('wallet table displays balance formatted with currency money format', function () {
+    Wallet::factory()->create([
+        'account_id' => $this->account->id,
+        'name' => 'Dompet Rupiah',
+        'current_balance' => 250000.00,
+    ]);
+
+    Livewire::test(ListWallets::class)
+        ->assertSuccessful()
+        ->assertSee('Rp')
+        ->assertSee('250.000');
+});
