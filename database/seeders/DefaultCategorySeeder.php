@@ -9,6 +9,7 @@ use App\Enums\CategoryType;
 use App\Models\Account;
 use App\Models\Category;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class DefaultCategorySeeder extends Seeder
 {
@@ -25,6 +26,7 @@ class DefaultCategorySeeder extends Seeder
             // --- SYSTEM CATEGORIES (is_system = true) ---
             [
                 'name' => 'SYSTEM_INITIAL_BALANCE',
+                'slug' => 'system-initial-balance',
                 'type' => CategoryType::Income,
                 'is_system' => true,
                 'icon' => 'heroicon-o-sparkles',
@@ -33,6 +35,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'SYSTEM_TRANSFER_IN',
+                'slug' => 'system-transfer-in',
                 'type' => CategoryType::Income,
                 'is_system' => true,
                 'icon' => 'heroicon-o-arrow-down-left',
@@ -41,6 +44,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'SYSTEM_DEBT_RECEIVED',
+                'slug' => 'system-debt-received',
                 'type' => CategoryType::Income,
                 'is_system' => true,
                 'icon' => 'heroicon-o-inbox-arrow-down',
@@ -49,6 +53,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'SYSTEM_DEBT_COLLECTED',
+                'slug' => 'system-debt-collected',
                 'type' => CategoryType::Income,
                 'is_system' => true,
                 'icon' => 'heroicon-o-check-badge',
@@ -57,6 +62,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'SYSTEM_TRANSFER_OUT',
+                'slug' => 'system-transfer-out',
                 'type' => CategoryType::Expense,
                 'is_system' => true,
                 'icon' => 'heroicon-o-arrow-up-right',
@@ -65,6 +71,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'SYSTEM_TRANSFER_FEE',
+                'slug' => 'system-transfer-fee',
                 'type' => CategoryType::Expense,
                 'is_system' => true,
                 'icon' => 'heroicon-o-banknotes',
@@ -73,6 +80,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'SYSTEM_DEBT_GIVEN',
+                'slug' => 'system-debt-given',
                 'type' => CategoryType::Expense,
                 'is_system' => true,
                 'icon' => 'heroicon-o-paper-airplane',
@@ -81,6 +89,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'SYSTEM_DEBT_REPAYMENT',
+                'slug' => 'system-debt-repayment',
                 'type' => CategoryType::Expense,
                 'is_system' => true,
                 'icon' => 'heroicon-o-arrow-path',
@@ -91,6 +100,7 @@ class DefaultCategorySeeder extends Seeder
             // --- PENDAPATAN / INCOME (is_system = false) ---
             [
                 'name' => 'Gaji',
+                'slug' => 'gaji',
                 'type' => CategoryType::Income,
                 'is_system' => false,
                 'icon' => 'heroicon-o-briefcase',
@@ -99,6 +109,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'Freelance',
+                'slug' => 'freelance',
                 'type' => CategoryType::Income,
                 'is_system' => false,
                 'icon' => 'heroicon-o-computer-desktop',
@@ -107,6 +118,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'Investasi',
+                'slug' => 'investasi-income',
                 'type' => CategoryType::Income,
                 'is_system' => false,
                 'icon' => 'heroicon-o-chart-bar',
@@ -115,6 +127,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'Lainnya',
+                'slug' => 'lainnya-income',
                 'type' => CategoryType::Income,
                 'is_system' => false,
                 'icon' => 'heroicon-o-ellipsis-horizontal-circle',
@@ -125,6 +138,7 @@ class DefaultCategorySeeder extends Seeder
             // --- PENGELUARAN / EXPENSE (is_system = false) ---
             [
                 'name' => 'Dapur',
+                'slug' => 'dapur',
                 'type' => CategoryType::Expense,
                 'is_system' => false,
                 'icon' => 'heroicon-o-shopping-cart',
@@ -133,6 +147,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'Belanja',
+                'slug' => 'belanja',
                 'type' => CategoryType::Expense,
                 'is_system' => false,
                 'icon' => 'heroicon-o-shopping-bag',
@@ -141,6 +156,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'Transportasi',
+                'slug' => 'transportasi',
                 'type' => CategoryType::Expense,
                 'is_system' => false,
                 'icon' => 'heroicon-o-truck',
@@ -149,6 +165,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'Tagihan & Utilitas',
+                'slug' => 'tagihan-utilitas',
                 'type' => CategoryType::Expense,
                 'is_system' => false,
                 'icon' => 'heroicon-o-bolt',
@@ -157,6 +174,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'Pendidikan',
+                'slug' => 'pendidikan',
                 'type' => CategoryType::Expense,
                 'is_system' => false,
                 'icon' => 'heroicon-o-academic-cap',
@@ -165,6 +183,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'Kesehatan',
+                'slug' => 'kesehatan',
                 'type' => CategoryType::Expense,
                 'is_system' => false,
                 'icon' => 'heroicon-o-heart',
@@ -173,6 +192,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'Properti',
+                'slug' => 'properti',
                 'type' => CategoryType::Expense,
                 'is_system' => false,
                 'icon' => 'heroicon-o-home',
@@ -181,6 +201,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'Hiburan',
+                'slug' => 'hiburan',
                 'type' => CategoryType::Expense,
                 'is_system' => false,
                 'icon' => 'heroicon-o-ticket',
@@ -189,6 +210,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'Investasi',
+                'slug' => 'investasi-expense',
                 'type' => CategoryType::Expense,
                 'is_system' => false,
                 'icon' => 'heroicon-o-arrow-trending-up',
@@ -197,6 +219,7 @@ class DefaultCategorySeeder extends Seeder
             ],
             [
                 'name' => 'Lainnya',
+                'slug' => 'lainnya-expense',
                 'type' => CategoryType::Expense,
                 'is_system' => false,
                 'icon' => 'heroicon-o-ellipsis-horizontal-circle',
@@ -213,6 +236,7 @@ class DefaultCategorySeeder extends Seeder
                     'type' => $cat['type'],
                 ],
                 [
+                    'slug' => $cat['slug'] ?? Str::slug($cat['name']),
                     'is_system' => $cat['is_system'],
                     'icon' => $cat['icon'],
                     'color' => $cat['color'],
