@@ -13,7 +13,7 @@ Tech Stack    : - Framework      : Laravel 13.x (PHP 8.2+)
                 - UI Engine      : Filament PHP v5.x (Livewire v4)
                 - Tenancy        : Filament Multi-Tenancy (Tenant Model: Account)
                 - Mobile UI      : hammadzafar05/mobile-bottom-nav
-                - Icon Picker    : guava/filament-icon-picker
+                - Icon Picker    : guava/filament-icon-picker + mallardduck/blade-lucide-icons
                 - Auth & 2FA     : Filament Breezy Plugin
                 - AI Assistant   : Laravel Boost (https://laravel.com/framework/docs/boost)
                 - Profiling/Dev  : fruitcake/laravel-debugbar (https://github.com/fruitcake/laravel-debugbar)

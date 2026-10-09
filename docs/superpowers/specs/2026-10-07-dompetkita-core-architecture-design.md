@@ -134,7 +134,7 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 - `account_id` : foreignId -> `accounts.id` (cascade on delete)
 - `name` : string(255)
 - `slug` : string(255)
-- `icon` : string(100), nullable (diinput via `guava/filament-icon-picker`)
+- `icon` : string(100), nullable (diinput via `guava/filament-icon-picker` + `mallardduck/blade-lucide-icons`, full width dengan responsive columns: default 1, lg 3, 2xl 5)
 - `color` : string(50), nullable (diinput via ColorPicker)
 - `current_balance` : decimal(24, 2), default(0.00)
 - `allow_minus` : boolean, default(false)
