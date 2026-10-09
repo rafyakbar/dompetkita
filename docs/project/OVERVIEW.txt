@@ -218,10 +218,11 @@ B. MASTER DATA KEUANGAN
    - account_id      : foreignId -> accounts.id (cascade on delete)
    - name            : string, index (contoh: "Bank UOB", "BCA", "Dompet Tunai")
    - slug            : string, index
-   - icon            : string(100), nullable (diinput via guava/filament-icon-picker)
+   - icon            : string(100), nullable (diinput via guava/filament-icon-picker, trigger box height 5.75rem proporsional)
    - color           : string(50), nullable (diinput via ColorPicker)
    - current_balance : decimal(24, 2), default(0.00), index
                        (saldo riil saat ini, dikelola otomatis via DB Transaction + lockForUpdate)
+                       (pada tabel diformat otomatis sesuai mata uang tenant: misal IDR -> "Rp 150.000", USD -> "$150.00")
    - allow_minus     : boolean, default(false), index (apakah saldo boleh bernilai minus)
    - Saldo Awal      : Saat dompet dibuat dengan saldo awal > 0, sistem otomatis mencatat
                        transaksi pemasukan awal dengan kategori sistem SYSTEM_INITIAL_BALANCE.

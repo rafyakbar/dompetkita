@@ -134,9 +134,9 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 - `account_id` : foreignId -> `accounts.id` (cascade on delete)
 - `name` : string(255)
 - `slug` : string(255)
-- `icon` : string(100), nullable (diinput via `guava/filament-icon-picker` + `mallardduck/blade-lucide-icons`, full width dengan responsive columns: default 1, lg 3, 2xl 5)
+- `icon` : string(100), nullable (diinput via `guava/filament-icon-picker` + `mallardduck/blade-lucide-icons`, full width dengan trigger box height 5.75rem dan responsive columns: default 1, lg 3, 2xl 5)
 - `color` : string(50), nullable (diinput via ColorPicker)
-- `current_balance` : decimal(24, 2), default(0.00)
+- `current_balance` : decimal(24, 2), default(0.00) (pada tabel diformat otomatis sesuai mata uang tenant: misal IDR -> "Rp 150.000", USD -> "$150.00")
 - `allow_minus` : boolean, default(false)
 - Saldo Awal: Diinput saat pembuatan dompet, jika > 0 otomatis mencatat transaksi `SYSTEM_INITIAL_BALANCE`.
 - Tampilan Tabel: Kolom `icon` (warna mengikuti `color`), `name` (warna teks mengikuti `color`), `current_balance` (Saldo), `allow_minus` (Minus).
