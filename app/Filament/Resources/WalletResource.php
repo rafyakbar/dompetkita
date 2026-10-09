@@ -16,11 +16,13 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Tables\Columns\ColorColumn;
+use Filament\Support\Colors\Color;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Guava\IconPicker\Forms\Components\IconPicker;
+use Guava\IconPicker\Tables\Columns\IconColumn as GuavaIconColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use UnitEnum;
@@ -35,7 +37,7 @@ class WalletResource extends Resource
 
     protected static ?string $modelLabel = 'Dompet';
 
-    protected static ?string $pluralModelLabel = 'Dompet & Rekening';
+    protected static ?string $pluralModelLabel = 'Dompet';
 
     protected static ?int $navigationSort = 10;
 
@@ -43,17 +45,21 @@ class WalletResource extends Resource
     {
         return $schema
             ->components([
+                IconPicker::make('icon')
+                    ->label('Icon'),
                 TextInput::make('name')
-                    ->label('Nama Dompet / Rekening')
+                    ->label('Nama Dompet')
                     ->required()
                     ->maxLength(255)
                     ->scopedUnique(),
-                TextInput::make('icon')
-                    ->label('Icon (Heroicons)')
-                    ->placeholder('heroicon-o-wallet')
-                    ->maxLength(100),
+                TextInput::make('initial_balance')
+                    ->label('Saldo Awal')
+                    ->numeric()
+                    ->default(0)
+                    ->visibleOn('create')
+                    ->dehydrated(true),
                 ColorPicker::make('color')
-                    ->label('Warna Label'),
+                    ->label('Warna'),
                 Toggle::make('allow_minus')
                     ->label('Bolehkan Saldo Negatif')
                     ->default(false)
@@ -63,23 +69,29 @@ class WalletResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $resolveColor = fn (?Wallet $record) => filled($record?->color)
+            ? (str_starts_with($record->color, '#') ? Color::hex($record->color) : $record->color)
+            : null;
+
         return $table
             ->columns([
+                GuavaIconColumn::make('icon')
+                    ->label('Icon')
+                    ->color($resolveColor),
                 TextColumn::make('name')
-                    ->label('Nama Dompet')
+                    ->label('Nama')
                     ->searchable()
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->color($resolveColor),
                 TextColumn::make('current_balance')
-                    ->label('Saldo Saat Ini')
+                    ->label('Saldo')
                     ->money(fn ($record): string => $record->account->currency_code ?? 'IDR')
                     ->sortable(),
                 IconColumn::make('allow_minus')
-                    ->label('Boleh Minus')
+                    ->label('Minus')
                     ->boolean()
                     ->sortable(),
-                ColorColumn::make('color')
-                    ->label('Warna'),
             ])
             ->filters([
                 TrashedFilter::make(),

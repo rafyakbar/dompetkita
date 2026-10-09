@@ -2,6 +2,7 @@
 
 use App\Filament\Resources\WalletResource\Pages\ListWallets;
 use App\Models\Account;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Wallet;
 use Filament\Actions\CreateAction;
@@ -52,6 +53,43 @@ test('can create wallet via slide-over modal with scoped unique validation', fun
             'name' => 'Bank Mandiri',
         ])
         ->assertHasActionErrors(['name']);
+});
+
+test('can create wallet with initial balance and generates SYSTEM_INITIAL_BALANCE transaction', function () {
+    Livewire::test(ListWallets::class)
+        ->callAction(CreateAction::class, data: [
+            'name' => 'BCA Bisnis',
+            'initial_balance' => 500000,
+            'color' => '#10b981',
+            'allow_minus' => true,
+        ])
+        ->assertHasNoActionErrors();
+
+    $wallet = Wallet::where('account_id', $this->account->id)->where('name', 'BCA Bisnis')->firstOrFail();
+
+    expect((float) $wallet->current_balance)->toBe(500000.0);
+
+    $transaction = Transaction::where('wallet_id', $wallet->id)->first();
+    expect($transaction)->not->toBeNull()
+        ->and((float) $transaction->amount)->toBe(500000.0)
+        ->and($transaction->direction)->toBe(1)
+        ->and($transaction->type)->toBe('transaction')
+        ->and($transaction->category_name)->toBe('SYSTEM_INITIAL_BALANCE')
+        ->and($transaction->account_id)->toBe($this->account->id);
+});
+
+test('creating wallet with zero initial balance does not generate transaction', function () {
+    Livewire::test(ListWallets::class)
+        ->callAction(CreateAction::class, data: [
+            'name' => 'Dompet Kosong',
+            'initial_balance' => 0,
+        ])
+        ->assertHasNoActionErrors();
+
+    $wallet = Wallet::where('account_id', $this->account->id)->where('name', 'Dompet Kosong')->firstOrFail();
+
+    expect((float) $wallet->current_balance)->toBe(0.0)
+        ->and(Transaction::where('wallet_id', $wallet->id)->count())->toBe(0);
 });
 
 test('can edit wallet via slide-over modal', function () {
