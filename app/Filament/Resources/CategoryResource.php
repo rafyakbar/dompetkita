@@ -62,7 +62,12 @@ class CategoryResource extends Resource
                     ->scopedUnique()
                     ->disabled(fn (?Category $record): bool => (bool) ($record?->is_system)),
                 IconPicker::make('icon')
-                    ->label('Icon'),
+                    ->label('Icon')
+                    ->columns([
+                        'default' => 1,
+                        'lg' => 3,
+                        '2xl' => 5,
+                    ]),
                 ColorPicker::make('color')
                     ->label('Warna'),
                 TextInput::make('order')

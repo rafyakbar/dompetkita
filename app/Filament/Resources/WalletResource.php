@@ -47,7 +47,12 @@ class WalletResource extends Resource
             ->components([
                 IconPicker::make('icon')
                     ->label('Icon')
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->columns([
+                        'default' => 1,
+                        'lg' => 3,
+                        '2xl' => 5,
+                    ]),
                 TextInput::make('name')
                     ->label('Nama Dompet')
                     ->required()

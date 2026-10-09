@@ -122,7 +122,7 @@ test('can soft-delete wallet', function () {
     expect($wallet->fresh()->trashed())->toBeTrue();
 });
 
-test('wallet form icon field has full width column span', function () {
+test('wallet form icon field has full width column span and responsive columns', function () {
     $page = new ListWallets;
     $schema = Schema::make($page);
     $form = WalletResource::form($schema);
@@ -130,5 +130,10 @@ test('wallet form icon field has full width column span', function () {
     $iconField = collect($form->getComponents())->first(fn ($c) => $c->getName() === 'icon');
 
     expect($iconField)->not->toBeNull()
-        ->and($iconField->getColumnSpan('default'))->toBe('full');
+        ->and($iconField->getColumnSpan('default'))->toBe('full')
+        ->and($iconField->getColumns())->toBe([
+            'default' => 1,
+            'lg' => 3,
+            '2xl' => 5,
+        ]);
 });
