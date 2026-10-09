@@ -52,7 +52,8 @@ class WalletResource extends Resource
                         'default' => 1,
                         'lg' => 3,
                         '2xl' => 5,
-                    ]),
+                    ])
+                    ->closeOnSelect(),
                 TextInput::make('name')
                     ->label('Nama Dompet')
                     ->required()

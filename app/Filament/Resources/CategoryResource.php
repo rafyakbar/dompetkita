@@ -67,7 +67,8 @@ class CategoryResource extends Resource
                         'default' => 1,
                         'lg' => 3,
                         '2xl' => 5,
-                    ]),
+                    ])
+                    ->closeOnSelect(),
                 ColorPicker::make('color')
                     ->label('Warna'),
                 TextInput::make('order')
