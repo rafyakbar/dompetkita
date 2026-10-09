@@ -23,25 +23,32 @@ class DefaultCategorySeeder extends Seeder
     {
         $defaultCategories = [
             [
-                'name' => 'Transfer Masuk',
+                'name' => 'SYSTEM_INITIAL_BALANCE',
                 'type' => CategoryType::Income,
-                'icon' => 'heroicon-o-arrow-down-left',
+                'icon' => 'heroicon-o-sparkles',
                 'color' => 'success',
                 'order' => 1,
             ],
             [
-                'name' => 'Transfer Keluar',
-                'type' => CategoryType::Expense,
-                'icon' => 'heroicon-o-arrow-up-right',
-                'color' => 'danger',
+                'name' => 'SYSTEM_TRANSFER_IN',
+                'type' => CategoryType::Income,
+                'icon' => 'heroicon-o-arrow-down-left',
+                'color' => 'success',
                 'order' => 2,
             ],
             [
-                'name' => 'Biaya Admin Transfer',
+                'name' => 'SYSTEM_TRANSFER_OUT',
+                'type' => CategoryType::Expense,
+                'icon' => 'heroicon-o-arrow-up-right',
+                'color' => 'danger',
+                'order' => 3,
+            ],
+            [
+                'name' => 'SYSTEM_TRANSFER_FEE',
                 'type' => CategoryType::Expense,
                 'icon' => 'heroicon-o-banknotes',
                 'color' => 'warning',
-                'order' => 3,
+                'order' => 4,
             ],
         ];
 

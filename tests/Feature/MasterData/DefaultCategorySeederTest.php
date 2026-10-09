@@ -9,28 +9,34 @@ use App\Models\User;
 use Database\Seeders\DefaultCategorySeeder;
 use Livewire\Livewire;
 
-test('seeder creates 3 default system categories for account', function () {
+test('seeder creates 4 default system categories for account', function () {
     $account = Account::factory()->create();
 
     DefaultCategorySeeder::seedForAccount($account);
 
     $categories = Category::where('account_id', $account->id)->get();
 
-    expect($categories)->toHaveCount(3);
+    expect($categories)->toHaveCount(4);
 
-    $transferIn = $categories->firstWhere('name', 'Transfer Masuk');
+    $initialBalance = $categories->firstWhere('name', 'SYSTEM_INITIAL_BALANCE');
+    expect($initialBalance)->not->toBeNull()
+        ->and($initialBalance->type)->toBe(CategoryType::Income)
+        ->and($initialBalance->is_system)->toBeTrue()
+        ->and($initialBalance->status)->toBe(CategoryStatus::Active);
+
+    $transferIn = $categories->firstWhere('name', 'SYSTEM_TRANSFER_IN');
     expect($transferIn)->not->toBeNull()
         ->and($transferIn->type)->toBe(CategoryType::Income)
         ->and($transferIn->is_system)->toBeTrue()
         ->and($transferIn->status)->toBe(CategoryStatus::Active);
 
-    $transferOut = $categories->firstWhere('name', 'Transfer Keluar');
+    $transferOut = $categories->firstWhere('name', 'SYSTEM_TRANSFER_OUT');
     expect($transferOut)->not->toBeNull()
         ->and($transferOut->type)->toBe(CategoryType::Expense)
         ->and($transferOut->is_system)->toBeTrue()
         ->and($transferOut->status)->toBe(CategoryStatus::Active);
 
-    $adminFee = $categories->firstWhere('name', 'Biaya Admin Transfer');
+    $adminFee = $categories->firstWhere('name', 'SYSTEM_TRANSFER_FEE');
     expect($adminFee)->not->toBeNull()
         ->and($adminFee->type)->toBe(CategoryType::Expense)
         ->and($adminFee->is_system)->toBeTrue()
@@ -43,7 +49,7 @@ test('seeder is idempotent and does not create duplicates on multiple runs', fun
     DefaultCategorySeeder::seedForAccount($account);
     DefaultCategorySeeder::seedForAccount($account);
 
-    expect(Category::where('account_id', $account->id)->count())->toBe(3);
+    expect(Category::where('account_id', $account->id)->count())->toBe(4);
 });
 
 test('registering new account automatically seeds default system categories', function () {
@@ -60,5 +66,5 @@ test('registering new account automatically seeds default system categories', fu
 
     $account = Account::where('slug', 'akun-usaha-baru')->firstOrFail();
 
-    expect($account->categories()->where('is_system', true)->count())->toBe(3);
+    expect($account->categories()->where('is_system', true)->count())->toBe(4);
 });
