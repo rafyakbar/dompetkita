@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\Resources\WalletResource;
 use App\Filament\Resources\WalletResource\Pages\ListWallets;
 use App\Models\Account;
 use App\Models\Transaction;
@@ -9,6 +10,7 @@ use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
+use Filament\Schemas\Schema;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -118,4 +120,15 @@ test('can soft-delete wallet', function () {
         ->assertHasNoTableActionErrors();
 
     expect($wallet->fresh()->trashed())->toBeTrue();
+});
+
+test('wallet form icon field has full width column span', function () {
+    $page = new ListWallets;
+    $schema = Schema::make($page);
+    $form = WalletResource::form($schema);
+
+    $iconField = collect($form->getComponents())->first(fn ($c) => $c->getName() === 'icon');
+
+    expect($iconField)->not->toBeNull()
+        ->and($iconField->getColumnSpan('default'))->toBe('full');
 });

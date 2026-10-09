@@ -46,7 +46,8 @@ class WalletResource extends Resource
         return $schema
             ->components([
                 IconPicker::make('icon')
-                    ->label('Icon'),
+                    ->label('Icon')
+                    ->columnSpanFull(),
                 TextInput::make('name')
                     ->label('Nama Dompet')
                     ->required()
@@ -63,7 +64,8 @@ class WalletResource extends Resource
                 Toggle::make('allow_minus')
                     ->label('Bolehkan Saldo Negatif')
                     ->default(false)
-                    ->helperText('Jika aktif, transaksi keluar tetap diizinkan meskipun saldo dompet tidak mencukupi.'),
+                    ->helperText('Jika aktif, transaksi keluar tetap diizinkan meskipun saldo dompet tidak mencukupi.')
+                    ->columnSpanFull(),
             ]);
     }
 
