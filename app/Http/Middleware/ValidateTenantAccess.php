@@ -31,8 +31,14 @@ class ValidateTenantAccess
             return $next($request);
         }
 
-        $tenant = Account::where('slug', $tenantSlug)->first();
         $user = auth()->user() ?? $request->user();
+
+        if ($user instanceof HasTenants) {
+            $tenant = $user->accounts()->where('accounts.slug', $tenantSlug)->first()
+                ?? Account::where('slug', $tenantSlug)->first();
+        } else {
+            $tenant = Account::where('slug', $tenantSlug)->first();
+        }
 
         // Tenant slug does not exist in database
         if (! $tenant) {
@@ -67,8 +73,14 @@ class ValidateTenantAccess
             $slug = $segments[1];
             $reserved = ['login', 'register', 'new', 'password-reset'];
 
-            if (! in_array($slug, $reserved, true) && ! Account::where('slug', $slug)->exists()) {
-                $request->session()->forget('url.intended');
+            if (! in_array($slug, $reserved, true)) {
+                $user = auth()->user() ?? $request->user();
+                $exists = ($user instanceof HasTenants && $user->accounts()->where('accounts.slug', $slug)->exists())
+                    || Account::where('slug', $slug)->exists();
+
+                if (! $exists) {
+                    $request->session()->forget('url.intended');
+                }
             }
         }
     }

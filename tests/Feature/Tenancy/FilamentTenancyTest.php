@@ -148,3 +148,34 @@ test('force deleting account cascades to account_member records', function () {
 
     expect(DB::table('account_member')->where('account_id', $account->id)->count())->toBe(0);
 });
+
+test('users with identical tenant slug resolve to their own tenant dashboard', function () {
+    $userA = User::factory()->create();
+    $accountA = Account::create(['owner_id' => $userA->id, 'name' => 'Bisnis Saya']);
+    $accountA->members()->attach($userA->id, [
+        'email' => $userA->email,
+        'role' => AccountRole::Owner->value,
+        'status' => MemberStatus::Active->value,
+        'confirmed_at' => now(),
+    ]);
+
+    $userB = User::factory()->create();
+    $accountB = Account::create(['owner_id' => $userB->id, 'name' => 'Bisnis Saya']);
+    $accountB->members()->attach($userB->id, [
+        'email' => $userB->email,
+        'role' => AccountRole::Owner->value,
+        'status' => MemberStatus::Active->value,
+        'confirmed_at' => now(),
+    ]);
+
+    expect($accountA->slug)->toBe('bisnis-saya')
+        ->and($accountB->slug)->toBe('bisnis-saya');
+
+    // Acting as User A accesses /app/bisnis-saya -> resolves to Account A
+    $responseA = $this->actingAs($userA)->get('/app/bisnis-saya');
+    $responseA->assertOk();
+
+    // Acting as User B accesses /app/bisnis-saya -> resolves to Account B
+    $responseB = $this->actingAs($userB)->get('/app/bisnis-saya');
+    $responseB->assertOk();
+});

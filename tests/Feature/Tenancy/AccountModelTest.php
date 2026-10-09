@@ -23,6 +23,25 @@ test('account generates unique slug automatically when creating if not set', fun
         ->and($duplicate->slug)->toStartWith('keuangan-keluarga-');
 });
 
+test('distinct users can create accounts with the same name and slug without collision', function () {
+    $userA = User::factory()->create();
+    $userB = User::factory()->create();
+
+    $accountA = Account::create([
+        'owner_id' => $userA->id,
+        'name' => 'Keuangan Keluarga',
+    ]);
+
+    $accountB = Account::create([
+        'owner_id' => $userB->id,
+        'name' => 'Keuangan Keluarga',
+    ]);
+
+    expect($accountA->slug)->toBe('keuangan-keluarga')
+        ->and($accountB->slug)->toBe('keuangan-keluarga')
+        ->and($accountA->id)->not->toBe($accountB->id);
+});
+
 test('user only retrieves active accounts via getTenants contract', function () {
     $user = User::factory()->create();
     $activeAccount = Account::factory()->create();

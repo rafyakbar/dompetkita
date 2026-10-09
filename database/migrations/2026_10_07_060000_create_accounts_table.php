@@ -16,9 +16,11 @@ return new class extends Migration
             $table->softDeletes();
             $table->foreignId('owner_id')->constrained('users')->cascadeOnDelete();
             $table->string('name')->index();
-            $table->string('slug')->unique();
+            $table->string('slug')->index();
             $table->string('currency_code', 3)->default('IDR');
             $table->text('description')->nullable();
+
+            $table->unique(['owner_id', 'slug']);
         });
     }
 

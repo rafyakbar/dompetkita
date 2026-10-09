@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Database\Factories\AccountFactory;
 use Filament\Models\Contracts\HasCurrentTenantLabel;
+use Filament\Models\Contracts\HasTenants;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -29,7 +30,7 @@ class Account extends Model implements HasCurrentTenantLabel
                 $slug = $baseSlug;
                 $counter = 1;
 
-                while (static::where('slug', $slug)->exists()) {
+                while (static::where('owner_id', $account->owner_id)->where('slug', $slug)->exists()) {
                     $slug = $baseSlug.'-'.$counter;
                     $counter++;
                 }
@@ -37,6 +38,23 @@ class Account extends Model implements HasCurrentTenantLabel
                 $account->slug = $slug;
             }
         });
+    }
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $field = $field ?? $this->getRouteKeyName();
+
+        if ($field === 'slug' && auth()->check()) {
+            $user = auth()->user();
+            if ($user instanceof HasTenants) {
+                $account = $user->accounts()->where('accounts.slug', $value)->first();
+                if ($account) {
+                    return $account;
+                }
+            }
+        }
+
+        return parent::resolveRouteBinding($value, $field);
     }
 
     public function getCurrentTenantLabel(): string

@@ -9,6 +9,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Models\Contracts\HasTenants;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -19,6 +20,7 @@ use Guava\IconPicker\IconPickerPlugin;
 use Hammadzafar05\MobileBottomNav\MobileBottomNav;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
@@ -37,6 +39,24 @@ class AppPanelProvider extends PanelProvider
             ->registration()
             ->passwordReset()
             ->tenant(Account::class, slugAttribute: 'slug')
+            ->resolveTenantUsing(function (string $key): ?Account {
+                $user = auth()->user();
+
+                if ($user instanceof HasTenants) {
+                    $account = $user->accounts()->where('accounts.slug', $key)->first();
+                    if ($account) {
+                        return $account;
+                    }
+                }
+
+                $account = Account::where('slug', $key)->first();
+
+                if (! $account) {
+                    throw (new ModelNotFoundException)->setModel(Account::class, [$key]);
+                }
+
+                return $account;
+            })
             ->tenantRegistration(RegisterAccount::class)
             ->sidebarCollapsibleOnDesktop()
             ->colors([
