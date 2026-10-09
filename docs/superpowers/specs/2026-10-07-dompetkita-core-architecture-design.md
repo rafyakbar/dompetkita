@@ -85,9 +85,10 @@ Berdasarkan tinjauan kritis arsitektur, keputusan desain final yang disepakati a
 - `deleted_at` : timestamp, nullable (soft deletes)
 - `owner_id` : foreignId -> `users.id` (cascade on delete)
 - `name` : string(255), index
-- `slug` : string(255), unique (route tenant key)
+- `slug` : string(255), index (route tenant key)
 - `currency_code` : string(3), default('IDR')
 - `description` : text, nullable
+- Unique constraint: `unique(owner_id, slug)`
 
 #### `account_member` (Pivot Keanggotaan & Undangan Tenant)
 - `id` : unsignedBigInteger, primary key

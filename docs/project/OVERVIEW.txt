@@ -162,9 +162,12 @@ A. CORE & OTENTIKASI
    - softDeletes
    - owner_id      : foreignId -> users.id (cascade on delete)
    - name          : string, index
-   - slug          : string, unique (digunakan sebagai route tenant key)
+   - slug          : string, index (digunakan sebagai route tenant key, unik per owner_id: unique(['owner_id', 'slug']))
    - currency_code : string(3), default('IDR') (mata uang pelaporan akun)
    - description   : text, nullable
+   - Catatan Tenancy: Unik per owner_id memungkinkan pengguna berbeda memiliki akun bernama sama
+     (misal: 'keuangan-pribadi') tanpa tabrakan. Resolusi tenant memprioritaskan akun milik/dikelola
+     oleh pengguna yang sedang login ($user->accounts()->where('accounts.slug', $slug)).
 
 3. account_member (Tabel Pivot & Undangan Member Tenant)
    Deskripsi: Menghubungkan user ke akun beserta status dan hak aksesnya.
