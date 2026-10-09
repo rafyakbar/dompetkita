@@ -7,7 +7,6 @@ use App\Models\Account;
 use App\Models\Category;
 use App\Models\User;
 use Filament\Actions\CreateAction;
-use Filament\Actions\DeleteAction;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
 
@@ -26,14 +25,33 @@ beforeEach(function () {
 });
 
 test('category resource list page renders correctly', function () {
-    Category::factory()->create([
+    $category = Category::factory()->create([
         'account_id' => $this->account->id,
         'name' => 'Makanan & Minuman',
+        'is_system' => false,
     ]);
 
     Livewire::test(ListCategories::class)
         ->assertSuccessful()
-        ->assertCanSeeTableRecords(Category::where('account_id', $this->account->id)->get());
+        ->assertCanSeeTableRecords([$category]);
+});
+
+test('system categories are not displayed in category list table', function () {
+    $systemCategory = Category::factory()->create([
+        'account_id' => $this->account->id,
+        'name' => 'SYSTEM_TRANSFER_IN',
+        'is_system' => true,
+    ]);
+
+    $customCategory = Category::factory()->create([
+        'account_id' => $this->account->id,
+        'name' => 'Hiburan',
+        'is_system' => false,
+    ]);
+
+    Livewire::test(ListCategories::class)
+        ->assertCanSeeTableRecords([$customCategory])
+        ->assertCanNotSeeTableRecords([$systemCategory]);
 });
 
 test('can create category with scoped unique validation', function () {
@@ -55,15 +73,4 @@ test('can create category with scoped unique validation', function () {
             'type' => CategoryType::Expense->value,
         ])
         ->assertHasActionErrors(['name']);
-});
-
-test('cannot delete system category', function () {
-    $systemCategory = Category::factory()->create([
-        'account_id' => $this->account->id,
-        'name' => 'Transfer Masuk',
-        'is_system' => true,
-    ]);
-
-    Livewire::test(ListCategories::class)
-        ->assertTableActionHidden(DeleteAction::class, $systemCategory);
 });
